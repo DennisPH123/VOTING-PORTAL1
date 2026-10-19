@@ -6,7 +6,7 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware for parsing request bodies and sessions
+// Middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(session({
@@ -15,11 +15,15 @@ app.use(session({
     saveUninitialized: true
 }));
 
-// Serve static files (HTML, CSS, client-side JS) from the root directory or a 'public' folder
-// If your html files are directly in the project root:
+// Serve static files from the root directory
 app.use(express.static(__dirname));
 
-// (Optional) Explicit route for admin dashboard incase direct file mapping fails
+// Route for the main homepage (change 'index.html' if your home page has a different filename)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html')); 
+});
+
+// Explicit route for the admin dashboard
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin.html'));
 });
