@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voting Portal - Admin Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 850px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+        h1, h2 { color: #2c3e50; }
+        .section { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #e1e4e8; }
+        input, select, button { padding: 12px; margin: 5px 0; font-size: 16px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { background: #3498db; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background: #2980b9; }
+        .hidden { display: none; }
+        
+        /* Nominee Item Row inside Admin */
+        .admin-nominee-row { display: flex; align-items: center; justify-content: space-between; background: #f8f9fa; padding: 8px 12px; margin: 6px 0; border-radius: 6px; border: 1px solid #e1e4e8; }
+        .admin-nominee-row img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; margin-right: 10px; }
+        
+        /* Modal Styles for Modern Tally */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .close-btn { background: #e74c3c; float: right; padding: 5px 10px; font-size: 14px; }
+        .tally-category { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e1e4e8; }
+        .tally-nominee { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; background: white; padding: 8px 12px; border-radius: 6px; border: 1px solid #ddd; }
+        .tally-nominee img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; margin-right: 12px; }
+        .progress-bar-container { flex-grow: 1; background: #e1e4e8; height: 10px; border-radius: 5px; margin: 0 15px; overflow: hidden; }
+        .progress-bar { background: #2ecc71; height: 100%; width: 0%; transition: width 0.4s ease; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>⚙️ Admin Dashboard</h1>
+
+    <!-- Login Section -->
+    <div id="login-section" class="section">
+        <h2>Admin Login</h2>
+        <input type="password" id="admin-password" placeholder="Enter Admin Password">
+        <br>
+        <button onclick="login()">Login</button>
+        <p id="login-error" style="color: #e74c3c;"></p>
+    </div>
+
+    <!-- Management Dashboard -->
+    <div id="dashboard-section" class="section hidden">
+        <button onclick="logout()" style="background: #e74c3c; float: right;">Logout</button>
+        <h2>Manage Categories</h2>
+        <input type="text" id="category-name" placeholder="Category Name (e.g., Best Head of Department)" style="width: 70%;">
+        <button onclick="addCategory()">Add Category</button>
+
+        <h2>Add Nominee</h2>
+        <select id="category-select" style="width: 100%;"></select>
+        <br>
+        <input type="text" id="nominee-name" placeholder="Nominee Name" style="width: 100%;">
+        <br>
+        <label style="display:block; margin-top:10px;">Nominee Photo:</label>
+        <input type="file" id="nominee-photo" accept="image/*" style="width: 100%;">
+        <br>
+        <button onclick="addNominee()" style="background: #2ecc71; width: 100%; margin-top: 15px;">Add Nominee</button>
+
+        <h2>Manage Existing Nominees</h2>
+        <div id="admin-nominees-list" style="margin-top: 10px;">
+            <p style="color: #7f8c8d;">Loading nominees...</p>
+        </div>
+
+        <h2 style="margin-top: 40px;">Live Results Monitoring</h2>
+        <button onclick="openTallyModal()" style="background: #9b59b6; width: 100%;">Open Live Tally Modal</button>
+    </div>
+</div>
+
+<!-- Modern Tally Modal -->
+<div id="tally-modal" class="modal">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeTallyModal()">Close</button>
+        <h2>📊 Live Vote Tally</h2>
+        <button onclick="fetchTally()" style="background: #3498db; margin-bottom: 15px; font-size: 14px; padding: 8px 12px; width: auto;">Refresh Data</button>
+        <div id="tally-container">
+            <p>Loading tallies...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function login() {
+        const password = document.getElementById('admin-password').value;
+        const res = await fetch('/api/admin/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password })
+        });
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('dashboard-section').classList.remove('hidden');
+            loadCategories();
+            loadAdminNominees();
+        } else {
+            document.getElementById('login-error').innerText = data.error;
+        }
+    }
+
+    async function logout() {
+        await fetch('/api/admin/logout', { method: 'POST' });
+        location.reload();
+    }
+
+    async function addCategory() {
+        const name = document.getElementById('category-name').value;
+        if (!name) return alert('Please enter a category name.');
+        const res = await fetch('/api/categories', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (res.ok) {
+            alert('Category added successfully!');
+            document.getElementById('category-name').value = '';
+            loadCategories();
+            loadAdminNominees();
+        }
+    }
+
+    async function loadCategories() {
+        const res = await fetch('/api/categories');
+        const categories = await res.json();
+        const select = document.getElementById('category-select');
+        select.innerHTML = '';
+        categories.forEach(cat => {
+            let opt = document.createElement('option');
+            opt.value = cat.id;
+            opt.innerText = cat.name;
+            select.appendChild(opt);
+        });
+    }
+
+    async function addNominee() {
+        const category_id = document.getElementById('category-select').value;
+        const name = document.getElementById('nominee-name').value;
+        const photoFile = document.getElementById('nominee-photo').files[0];
+
+        if (!category_id || !name) {
+            alert('Please select a category and enter a nominee name.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('category_id', category_id);
+        formData.append('name', name);
+        if (photoFile) formData.append('photo', photoFile);
+
+        const res = await fetch('/api/nominees', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (res.ok) {
+            alert('Nominee added with photo!');
+            document.getElementById('nominee-name').value = '';
+            document.getElementById('nominee-photo').value = '';
+            loadAdminNominees();
+        } else {
+            alert('Failed to add nominee.');
+        }
+    }
+
+    async function loadAdminNominees() {
+        const res = await fetch('/api/voting/data');
+        const categories = await res.json();
+        const container = document.getElementById('admin-nominees-list');
+        container.innerHTML = '';
+
+        if (!categories || categories.length === 0) {
+            container.innerHTML = '<p style="color: #7f8c8d;">No categories found.</p>';
+            return;
+        }
+
+        categories.forEach(cat => {
+            let catDiv = document.createElement('div');
+            catDiv.style.marginBottom = '15px';
+            catDiv.innerHTML = `<h4 style="margin-bottom: 5px; color: #2c3e50;">${cat.category_name}</h4>`;
+
+            if (!cat.nominees || cat.nominees.length === 0) {
+                catDiv.innerHTML += `<p style="font-size: 13px; color: #7f8c8d; margin: 0 0 10px 10px;">No nominees in this category.</p>`;
+            } else {
+                cat.nominees.forEach(nom => {
+                    let imgPath = nom.photo_url ? nom.photo_url : 'https://via.placeholder.com/35';
+                    let row = document.createElement('div');
+                    row.className = 'admin-nominee-row';
+                    row.innerHTML = `
+                        <div style="display: flex; align-items: center;">
+                            <img src="${imgPath}" alt="${nom.name}">
+                            <span style="font-weight: 500; font-size: 14px;">${nom.name}</span>
+                        </div>
+                        <button onclick="deleteNominee(${nom.id})" style="background: #e74c3c; padding: 6px 12px; font-size: 13px; margin: 0;">Remove</button>
+                    `;
+                    catDiv.appendChild(row);
+                });
+            }
+            container.appendChild(catDiv);
+        });
+    }
+
+    async function deleteNominee(nomineeId) {
+        if (!confirm('Are you sure you want to remove this nominee?')) return;
+
+        const res = await fetch(`/api/nominees/${nomineeId}`, {
+            method: 'DELETE'
+        });
+
+        if (res.ok) {
+            alert('Nominee removed successfully!');
+            loadAdminNominees();
+        } else {
+            alert('Failed to delete nominee.');
+        }
+    }
+
+    function openTallyModal() {
+        document.getElementById('tally-modal').style.display = 'flex';
+        fetchTally();
+    }
+
+    function closeTallyModal() {
+        document.getElementById('tally-modal').style.display = 'none';
+    }
+
+    async function fetchTally() {
+        const res = await fetch('/api/admin/tally');
+        const rows = await res.json();
+        const container = document.getElementById('tally-container');
+        container.innerHTML = '';
+
+        if (!rows || rows.length === 0) {
+            container.innerHTML = '<p>No votes or categories recorded yet.</p>';
+            return;
+        }
+
+        let categoriesMap = {};
+        rows.forEach(row => {
+            if (!categoriesMap[row.category_id]) {
+                categoriesMap[row.category_id] = {
+                    name: row.category_name,
+                    nominees: []
+                };
+            }
+            if (row.nominee_id) {
+                categoriesMap[row.category_id].nominees.push({
+                    id: row.nominee_id,
+                    name: row.nominee_name,
+                    photo_url: row.photo_url,
+                    votes: row.vote_count
+                });
+            }
+        });
+
+        for (let catId in categoriesMap) {
+            let cat = categoriesMap[catId];
+            let catDiv = document.createElement('div');
+            catDiv.className = 'tally-category';
+            
+            let html = `<h3 style="margin-top:0; color: #2c3e50;">${cat.name}</h3>`;
+            let totalCategoryVotes = cat.nominees.reduce((sum, nom) => sum + nom.votes, 0);
+
+            if (cat.nominees.length === 0) {
+                html += `<p style="font-size: 14px; color: #7f8c8d;">No nominees in this category.</p>`;
+            } else {
+                cat.nominees.forEach(nom => {
+                    let percentage = totalCategoryVotes > 0 ? Math.round((nom.votes / totalCategoryVotes) * 100) : 0;
+                    let imgPath = nom.photo_url ? nom.photo_url : 'https://via.placeholder.com/40';
+
+                    html += `
+                        <div class="tally-nominee">
+                            <div style="display: flex; align-items: center; width: 35%;">
+                                <img src="${imgPath}" alt="${nom.name}">
+                                <span style="font-weight: bold; font-size: 14px;">${nom.name}</span>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" style="width: ${percentage}%;"></div>
+                            </div>
+                            <div style="font-size: 14px; font-weight: bold; width: 20%; text-align: right;">
+                                ${nom.votes} votes (${percentage}%)
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            catDiv.innerHTML = html;
+            container.appendChild(catDiv);
+        }
+    }
+</script>
+
+</body>
+</html>
