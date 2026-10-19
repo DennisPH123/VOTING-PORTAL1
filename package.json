@@ -1,5 +1,5 @@
 {
-  "name": "voting-portal",
+  "name": "voting-portal1",
   "version": "1.0.0",
   "description": "Employee Voting Portal",
   "main": "server.js",
@@ -8,9 +8,7 @@
   },
   "dependencies": {
     "express": "^4.19.2",
-    "express-session": "^1.19.0",
-    "multer": "^2.4.0",
-    "sqlite3": "^5.1.7",
-    "xlsx": "^0.18.5"
+    "express-session": "^1.18.0",
+    "multer": "^1.4.5-lts.1"
   }
 }
