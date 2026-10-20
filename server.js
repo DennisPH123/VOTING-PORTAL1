@@ -24,8 +24,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// In-Memory or JSON Store for Categories, Nominees, and Votes
-// (You can replace or persist this with your voting.db if needed)
+// In-Memory Store for Categories, Nominees, and Votes
 let votingData = {
     categories: [
         {
@@ -78,7 +77,7 @@ const VOTERS_DATABASE = [
   { tag: "ADM030", name: "NJERI" },
   { tag: "ADM032", name: "ODHIAMBO" },
   { tag: "ADM034", name: "ACHIENG" },
-  { tag: "ADM035", name: "OMwEGA" },
+  { tag: "ADM035", name: "OMWEGA" },
   { tag: "ADM037", name: "MOGAKA" },
   { tag: "ADM039", name: "NYAMACHE" },
   { tag: "ADM040", name: "KIBET" },
@@ -340,12 +339,14 @@ const VOTERS_DATABASE = [
   { tag: "SPA3261", name: "SHIDIKHA" }
 ];
 
-// API: Voter Login
+// Fixed Login Endpoint with normalized tags
 app.post('/api/login', (req, res) => {
     const { tag } = req.body;
     if (!tag) return res.status(400).json({ success: false, message: "Provide employee number." });
     
-    const voter = VOTERS_DATABASE.find(v => v.tag === tag.trim().toUpperCase());
+    const cleanInputTag = tag.toString().trim().toUpperCase().replace(/\s+/g, '');
+    const voter = VOTERS_DATABASE.find(v => v.tag.trim().toUpperCase().replace(/\s+/g, '') === cleanInputTag);
+    
     if (voter) {
         res.json({ success: true, voter });
     } else {
@@ -353,7 +354,6 @@ app.post('/api/login', (req, res) => {
     }
 });
 
-// API: Admin Login
 app.post('/api/admin-login', (req, res) => {
     const { password } = req.body;
     if (password === "admin123") {
@@ -363,37 +363,38 @@ app.post('/api/admin-login', (req, res) => {
     }
 });
 
-// API: Get Voting Data (Categories, Nominees, Photos, and Tally)
 app.get('/api/voting-data', (req, res) => {
     res.json(votingData);
 });
 
-// API: Add Category
 app.post('/api/admin/category', (req, res) => {
     const { name } = req.body;
     if (!name) return res.status(400).json({ success: false, message: "Category name required." });
-    
     const newCategory = { id: 'cat_' + Date.now(), name, nominees: [] };
     votingData.categories.push(newCategory);
     res.json({ success: true, votingData });
 });
 
-// API: Delete Category
 app.delete('/api/admin/category/:id', (req, res) => {
     votingData.categories = votingData.categories.filter(c => c.id !== req.params.id);
     res.json({ success: true, votingData });
 });
 
-// API: Add Nominee with Photo
+// Fixed Nominee Endpoint supporting robust field parsing
 app.post('/api/admin/nominee', upload.single('photo'), (req, res) => {
-    const { categoryId, name } = req.body;
+    const categoryId = req.body.categoryId;
+    const nomineeName = req.body.name || req.body.nomineeName || req.body.fullName;
     const photoPath = req.file ? `uploads/${req.file.filename}` : 'uploads/default.png';
+
+    if (!nomineeName) {
+        return res.status(400).json({ success: false, message: "Nominee name is required." });
+    }
 
     const category = votingData.categories.find(c => c.id === categoryId);
     if (category) {
         category.nominees.push({
             id: 'nom_' + Date.now(),
-            name,
+            name: nomineeName,
             photo: photoPath,
             votes: 0
         });
@@ -403,7 +404,6 @@ app.post('/api/admin/nominee', upload.single('photo'), (req, res) => {
     }
 });
 
-// API: Delete Nominee
 app.delete('/api/admin/nominee/:categoryId/:nomineeId', (req, res) => {
     const category = votingData.categories.find(c => c.id === req.params.categoryId);
     if (category) {
@@ -414,7 +414,6 @@ app.delete('/api/admin/nominee/:categoryId/:nomineeId', (req, res) => {
     }
 });
 
-// API: Cast Vote
 app.post('/api/vote', (req, res) => {
     const { categoryId, nomineeId } = req.body;
     const category = votingData.categories.find(c => c.id === categoryId);

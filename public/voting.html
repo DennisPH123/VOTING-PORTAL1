@@ -22,7 +22,7 @@
 <body>
 
 <div class="container">
-    <img src="logo.png" alt="Logo" class="logo">
+    <img src="logo.png" alt="Logo" class="logo" onerror="this.style.display='none'">
     <h2>Official Voting Ballot</h2>
     <p id="welcome-msg" style="text-align: center; font-weight: bold; color: #555;"></p>
 
@@ -54,7 +54,7 @@
                         ${cat.nominees.map(n => `
                             <div class="nominee-card" id="card-${cat.id}-${n.id}" onclick="selectNominee('${cat.id}', '${n.id}')">
                                 <img src="${n.photo}" class="nominee-img">
-                                <div><strong>${n.name}</strong></div>
+                                <div><strong>${n.name || n.nomineeName || n.fullName || 'Nominee'}</strong></div>
                             </div>
                         `).join('')}
                     </div>
@@ -65,10 +65,7 @@
     }
 
     function selectNominee(categoryId, nomineeId) {
-        // Clear previous selection in this category visually
         document.querySelectorAll(`[id^="card-${categoryId}-"]`).forEach(el => el.classList.remove('selected'));
-        
-        // Select new card
         document.getElementById(`card-${categoryId}-${nomineeId}`).classList.add('selected');
         selectedVotes[categoryId] = nomineeId;
     }
