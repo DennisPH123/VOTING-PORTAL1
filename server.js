@@ -1,14 +1,45 @@
 const express = require('express');
 const path = require('path');
+const multer = require('multer');
+const fs = require('fs');
+
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Serve all frontend files from the 'public' folder
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Complete Voter Records Database (Parsed from voting tags.xlsx)
+// Configure Multer for Nominee Photo Uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(__dirname, 'public', 'uploads');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+const upload = multer({ storage: storage });
+
+// In-Memory or JSON Store for Categories, Nominees, and Votes
+// (You can replace or persist this with your voting.db if needed)
+let votingData = {
+    categories: [
+        {
+            id: "cat_1",
+            name: "Best Head of Department",
+            nominees: [
+                { id: "nom_1", name: "John Doe", photo: "uploads/default.png", votes: 0 },
+                { id: "nom_2", name: "Jane Smith", photo: "uploads/default.png", votes: 0 }
+            ]
+        }
+    ]
+};
+
+// 333 Voter Database
 const VOTERS_DATABASE = [
   { tag: "ACT1505", name: "NYAE" },
   { tag: "ACT1508", name: "MAGOMA" },
@@ -309,37 +340,93 @@ const VOTERS_DATABASE = [
   { tag: "SPA3261", name: "SHIDIKHA" }
 ];
 
-// Voter Login Route
+// API: Voter Login
 app.post('/api/login', (req, res) => {
     const { tag } = req.body;
-    if (!tag) {
-        return res.status(400).json({ success: false, message: "Please provide an Employee Number." });
-    }
-    const cleanTag = tag.trim().toUpperCase();
-    const voter = VOTERS_DATABASE.find(v => v.tag === cleanTag);
-
+    if (!tag) return res.status(400).json({ success: false, message: "Provide employee number." });
+    
+    const voter = VOTERS_DATABASE.find(v => v.tag === tag.trim().toUpperCase());
     if (voter) {
-        return res.json({ success: true, message: "Login successful", voter });
+        res.json({ success: true, voter });
     } else {
-        return res.status(401).json({ success: false, message: "Invalid Employee Number." });
+        res.status(401).json({ success: false, message: "Invalid Employee Number." });
     }
 });
 
-// Admin Login Route
+// API: Admin Login
 app.post('/api/admin-login', (req, res) => {
     const { password } = req.body;
     if (password === "admin123") {
-        return res.json({ success: true, message: "Admin authenticated" });
+        res.json({ success: true });
     } else {
-        return res.status(401).json({ success: false, message: "Incorrect Admin Password" });
+        res.status(401).json({ success: false, message: "Incorrect password" });
     }
 });
 
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// API: Get Voting Data (Categories, Nominees, Photos, and Tally)
+app.get('/api/voting-data', (req, res) => {
+    res.json(votingData);
+});
+
+// API: Add Category
+app.post('/api/admin/category', (req, res) => {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ success: false, message: "Category name required." });
+    
+    const newCategory = { id: 'cat_' + Date.now(), name, nominees: [] };
+    votingData.categories.push(newCategory);
+    res.json({ success: true, votingData });
+});
+
+// API: Delete Category
+app.delete('/api/admin/category/:id', (req, res) => {
+    votingData.categories = votingData.categories.filter(c => c.id !== req.params.id);
+    res.json({ success: true, votingData });
+});
+
+// API: Add Nominee with Photo
+app.post('/api/admin/nominee', upload.single('photo'), (req, res) => {
+    const { categoryId, name } = req.body;
+    const photoPath = req.file ? `uploads/${req.file.filename}` : 'uploads/default.png';
+
+    const category = votingData.categories.find(c => c.id === categoryId);
+    if (category) {
+        category.nominees.push({
+            id: 'nom_' + Date.now(),
+            name,
+            photo: photoPath,
+            votes: 0
+        });
+        res.json({ success: true, votingData });
+    } else {
+        res.status(404).json({ success: false, message: "Category not found." });
+    }
+});
+
+// API: Delete Nominee
+app.delete('/api/admin/nominee/:categoryId/:nomineeId', (req, res) => {
+    const category = votingData.categories.find(c => c.id === req.params.categoryId);
+    if (category) {
+        category.nominees = category.nominees.filter(n => n.id !== req.params.nomineeId);
+        res.json({ success: true, votingData });
+    } else {
+        res.status(404).json({ success: false, message: "Category not found." });
+    }
+});
+
+// API: Cast Vote
+app.post('/api/vote', (req, res) => {
+    const { categoryId, nomineeId } = req.body;
+    const category = votingData.categories.find(c => c.id === categoryId);
+    if (category) {
+        const nominee = category.nominees.find(n => n.id === nomineeId);
+        if (nominee) {
+            nominee.votes += 1;
+            return res.json({ success: true, message: "Vote recorded successfully!" });
+        }
+    }
+    res.status(400).json({ success: false, message: "Invalid category or nominee." });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

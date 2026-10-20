@@ -3,121 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Swahili Beach - Admin Login</title>
+    <title>Swahili Beach - Admin Dashboard</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #343a40;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        .admin-card {
-            background: #ffffff;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
-        .logo {
-            max-width: 140px;
-            height: auto;
-            margin-bottom: 20px;
-        }
-        h2 {
-            color: #333;
-            margin-bottom: 20px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-            text-align: left;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #555;
-            font-weight: 600;
-        }
-        input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 16px;
-            box-sizing: border-box;
-            outline: none;
-        }
-        .btn {
-            width: 100%;
-            padding: 12px;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .btn:hover {
-            background-color: #218838;
-        }
-        #error-msg {
-            color: #d9534f;
-            margin-top: 15px;
-            font-size: 14px;
-        }
+        body { font-family: 'Segoe UI', sans-serif; background: #f8f9fa; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .logo { max-width: 120px; display: block; margin: 0 auto 20px; }
+        h1, h2 { color: #2c3e50; text-align: center; }
+        .section { margin-bottom: 30px; padding: 20px; background: #f1f3f5; border-radius: 6px; }
+        input, button { padding: 10px; margin: 5px 0; font-size: 15px; }
+        input[type="text"], input[type="password"], input[type="file"] { width: calc(100% - 22px); }
+        button { background: #0056b3; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #004085; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #bd2130; }
+        .nominee-item { display: flex; align-items: center; justify-content: space-between; background: white; padding: 10px; margin: 5px 0; border-radius: 4px; border: 1px solid #ddd; }
+        .nominee-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; margin-right: 10px; }
+        #admin-panel { display: none; }
     </style>
 </head>
 <body>
 
-    <div class="admin-card">
-        <img src="logo.png" alt="Swahili Beach Logo" class="logo">
-        <h2>Admin Login</h2>
-        
-        <form id="adminLoginForm">
-            <div class="form-group">
-                <label for="password">Admin Password</label>
-                <input type="password" id="password" name="password" placeholder="Enter admin password" required>
-            </div>
-            
-            <button type="submit" class="btn">Login</button>
-        </form>
+<div class="container">
+    <img src="logo.png" alt="Logo" class="logo">
 
-        <div id="error-msg"></div>
+    <!-- Login Screen -->
+    <div id="login-section">
+        <h2>Admin Authentication</h2>
+        <form id="adminLoginForm">
+            <input type="password" id="adminPassword" placeholder="Enter Admin Password (admin123)" required>
+            <button type="submit" style="width: 100%;">Access Dashboard</button>
+        </form>
+        <p id="login-error" style="color: red; text-align: center;"></p>
     </div>
 
-    <script>
-        document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const password = document.getElementById('password').value;
-            const errorDiv = document.getElementById('error-msg');
-            errorDiv.textContent = '';
+    <!-- Protected Admin Dashboard -->
+    <div id="admin-panel">
+        <h1>Admin Control Panel</h1>
 
-            try {
-                const response = await fetch('/api/admin-login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password })
-                });
+        <!-- Categories & Nominee Management -->
+        <div class="section">
+            <h2>Manage Categories & Nominees</h2>
+            <form id="categoryForm">
+                <input type="text" id="catName" placeholder="New Category Name (e.g. Best Employee)" required>
+                <button type="submit">Add Category</button>
+            </form>
+            <div id="categories-container" style="margin-top: 20px;"></div>
+        </div>
 
-                const data = await response.json();
+        <!-- Live Tally Panel -->
+        <div class="section">
+            <h2>📊 Live Vote Tally</h2>
+            <div id="tally-container">Loading tally...</div>
+            <button onclick="loadDashboardData()" style="margin-top: 15px;">Refresh Tally</button>
+        </div>
+    </div>
+</div>
 
-                if (response.ok && data.success) {
-                    localStorage.setItem('isAdminAuthenticated', 'true');
-                    window.location.href = 'admin-dashboard.html'; // or your main tally page
-                } else {
-                    errorDiv.textContent = data.message || 'Incorrect password.';
-                }
-            } catch (err) {
-                errorDiv.textContent = 'Connection error. Please try again.';
-            }
+<script>
+    document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const password = document.getElementById('adminPassword').value;
+        const res = await fetch('/api/admin-login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password })
         });
-    </script>
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('admin-panel').style.display = 'block';
+            loadDashboardData();
+        } else {
+            document.getElementById('login-error').textContent = data.message;
+        }
+    });
+
+    async function loadDashboardData() {
+        const res = await fetch('/api/voting-data');
+        const data = await res.json();
+        
+        let catHtml = '';
+        let tallyHtml = '';
+
+        data.categories.forEach(cat => {
+            catHtml += `
+                <div style="background: white; padding: 15px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ccc;">
+                    <h3>${cat.name} <button class="btn-danger" onclick="deleteCategory('${cat.id}')">Delete Category</button></h3>
+                    <div style="margin-left: 15px;">
+                        <h4>Nominees:</h4>
+                        ${cat.nominees.map(n => `
+                            <div class="nominee-item">
+                                <div style="display: flex; align-items: center;">
+                                    <img src="${n.photo}" class="nominee-img">
+                                    <span>${n.name} (${n.votes} votes)</span>
+                                </div>
+                                <button class="btn-danger" onclick="deleteNominee('${cat.id}', '${n.id}')">Remove</button>
+                            </div>
+                        `).join('')}
+                        <form onsubmit="addNominee(event, '${cat.id}')" style="margin-top: 10px;">
+                            <input type="text" placeholder="Nominee Name" name="nomineeName" required style="width: 45%;">
+                            <input type="file" name="photo" accept="image/*" required style="width: 35%;">
+                            <button type="submit" style="width: 15%;">Add</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+
+            tallyHtml += `<div><strong>${cat.name}</strong><ul>`;
+            cat.nominees.forEach(n => {
+                tallyHtml += `<li>${n.name}: <strong>${n.votes}</strong> votes</li>`;
+            });
+            tallyHtml += `</ul></div>`;
+        });
+
+        document.getElementById('categories-container').innerHTML = catHtml;
+        document.getElementById('tally-container').innerHTML = tallyHtml;
+    }
+
+    document.getElementById('categoryForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('catName').value;
+        await fetch('/api/admin/category', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        document.getElementById('catName').value = '';
+        loadDashboardData();
+    });
+
+    async function deleteCategory(id) {
+        if(confirm('Are you sure?')) {
+            await fetch(`/api/admin/category/${id}`, { method: 'DELETE' });
+            loadDashboardData();
+        }
+    }
+
+    async function addNominee(e, categoryId) {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        formData.append('categoryId', categoryId);
+
+        await fetch('/api/admin/nominee', {
+            method: 'POST',
+            body: formData
+        });
+        loadDashboardData();
+    }
+
+    async function deleteNominee(categoryId, nomineeId) {
+        if(confirm('Remove this nominee?')) {
+            await fetch(`/api/admin/nominee/${categoryId}/${nomineeId}`, { method: 'DELETE' });
+            loadDashboardData();
+        }
+    }
+</script>
 
 </body>
 </html>
