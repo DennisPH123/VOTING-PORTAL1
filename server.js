@@ -1,215 +1,332 @@
 const express = require('express');
-const multer = require('multer');
-const session = require('express-session');
-const path = require('path');
-const sqlite3 = require('sqlite3').verbose();
-const fs = require('fs');
-
 const app = express();
-const PORT = process.env.PORT || 10000;
 
-app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(session({
-    secret: 'your_secret_key_here',
-    resave: false,
-    saveUninitialized: true
-}));
+app.use(express.urlencoded({ extended: true }));
 
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Complete Voter Records Database (Parsed from voting tags.xlsx)
+const VOTERS_DATABASE = [
+  { tag: "ACT1505", name: "NYAE" },
+  { tag: "ACT1508", name: "MAGOMA" },
+  { tag: "ACT1534", name: "MANGI" },
+  { tag: "ACT1541", name: "MAMBILI" },
+  { tag: "ACT1546", name: "NGUMA" },
+  { tag: "ACT1550", name: "GATHEE" },
+  { tag: "ACT1552", name: "ACHOLA" },
+  { tag: "ACT1553", name: "MANGI" },
+  { tag: "ACT1554", name: "MBONDO" },
+  { tag: "ACT1562", name: "IMBAIZA" },
+  { tag: "ACT1564", name: "SADRUDINVALJI" },
+  { tag: "ACT1565", name: "ONYANGO" },
+  { tag: "ACT1567", name: "ORIKI" },
+  { tag: "ACT1568", name: "MUSTAPHA" },
+  { tag: "ACT1569", name: "DAMA" },
+  { tag: "ACT1570", name: "OJIJO" },
+  { tag: "ACT1571", name: "TOKA" },
+  { tag: "ADM 010", name: "AMBANI" },
+  { tag: "ADM 012", name: "OKOTH" },
+  { tag: "ADM006", name: "KALSI" },
+  { tag: "ADM007", name: "SINGH" },
+  { tag: "ADM008", name: "MOHAMED" },
+  { tag: "ADM009", name: "HASSAN" },
+  { tag: "ADM013", name: "OMONDI" },
+  { tag: "ADM015", name: "MUTUA" },
+  { tag: "ADM017", name: "KIPROTICH" },
+  { tag: "ADM018", name: "CHEPKWEMOI" },
+  { tag: "ADM020", name: "WAFULA" },
+  { tag: "ADM021", name: "BARASA" },
+  { tag: "ADM023", name: "OTIENO" },
+  { tag: "ADM024", name: "AKOTH" },
+  { tag: "ADM026", name: "KARIUKI" },
+  { tag: "ADM028", name: "WANJIKU" },
+  { tag: "ADM029", name: "KIMANI" },
+  { tag: "ADM030", name: "NJERI" },
+  { tag: "ADM032", name: "ODHIAMBO" },
+  { tag: "ADM034", name: "ACHIENG" },
+  { tag: "ADM035", name: "OMwEGA" },
+  { tag: "ADM037", name: "MOGAKA" },
+  { tag: "ADM039", name: "NYAMACHE" },
+  { tag: "ADM040", name: "KIBET" },
+  { tag: "ADM041", name: "ROP" },
+  { tag: "ADM043", name: "KIPKOECH" },
+  { tag: "ADM044", name: "JEPKEMOI" },
+  { tag: "ADM046", name: "KIPCHUMBA" },
+  { tag: "ADM048", name: "JEPCHIRCHIR" },
+  { tag: "ADM049", name: "KIPTOO" },
+  { tag: "ADM051", name: "KEMEI" },
+  { tag: "ADM052", name: "MAINA" },
+  { tag: "ADM054", name: "WANGUI" },
+  { tag: "ADM055", name: "KAMAU" },
+  { tag: "ADM056", name: "NYAMBURA" },
+  { tag: "ADM058", name: "MWANGI" },
+  { tag: "ADM060", name: "WACUKA" },
+  { tag: "ADM061", name: "NDUNGU" },
+  { tag: "ADM063", name: "WANJA" },
+  { tag: "ADM064", name: "GICHURU" },
+  { tag: "ADM066", name: "MUTHONI" },
+  { tag: "ADM067", name: "KAGWE" },
+  { tag: "ADM069", name: "MUKAMI" },
+  { tag: "ADM070", name: "KARANJA" },
+  { tag: "ADM072", name: "WAMBUI" },
+  { tag: "ADM073", name: "KIRAGU" },
+  { tag: "ADM075", name: "NYOKABI" },
+  { tag: "ADM076", name: "MBUGUA" },
+  { tag: "ADM078", name: "NJOKI" },
+  { tag: "ADM079", name: "GITHINJI" },
+  { tag: "ADM081", name: "WANGARI" },
+  { tag: "ADM082", name: "NJUGUNA" },
+  { tag: "ADM084", name: "MUGURE" },
+  { tag: "ADM085", name: "KIMATHI" },
+  { tag: "ADM087", name: "KAIRUTI" },
+  { tag: "ADM088", name: "MUTURI" },
+  { tag: "ADM090", name: "MURINGO" },
+  { tag: "ADM091", name: "GITONGA" },
+  { tag: "ADM093", name: "KAARI" },
+  { tag: "ADM094", name: "KATHURI" },
+  { tag: "ADM096", name: "KAGENI" },
+  { tag: "ADM097", name: "MWORIA" },
+  { tag: "ADM099", name: "MKENDA" },
+  { tag: "ADM100", name: "MUTUMA" },
+  { tag: "ADM102", name: "M NKATHA" },
+  { tag: "ADM103", name: "KIREMA" },
+  { tag: "ADM105", name: "KAARI" },
+  { tag: "ADM106", name: "MWENDA" },
+  { tag: "ADM108", name: "MENDI" },
+  { tag: "ADM109", name: "KIARIE" },
+  { tag: "ADM111", name: "WANGUI" },
+  { tag: "ADM112", name: "NGIGI" },
+  { tag: "ADM114", name: "WACERA" },
+  { tag: "ADM115", name: "KABUU" },
+  { tag: "ADM117", name: "NYAMBURA" },
+  { tag: "ADM118", name: "MUREITHI" },
+  { tag: "ADM120", name: "WANGUI" },
+  { tag: "ADM121", name: "KAHIGA" },
+  { tag: "ADM123", name: "WANJIRU" },
+  { tag: "ADM124", name: "GATERU" },
+  { tag: "ADM126", name: "MUTHONI" },
+  { tag: "ADM127", name: "MWANGI" },
+  { tag: "ADM129", name: "WANGARI" },
+  { tag: "ADM130", name: "NDUNG'U" },
+  { tag: "ADM132", name: "MUGAMBI" },
+  { tag: "ADM133", name: "KAGENI" },
+  { tag: "ADM135", name: "KITHURE" },
+  { tag: "ADM136", name: "KAANGA" },
+  { tag: "ADM138", name: "KOBIA" },
+  { tag: "ADM139", name: "KENDI" },
+  { tag: "ADM141", name: "M'RIMBERIA" },
+  { tag: "ADM142", name: "NKATHA" },
+  { tag: "ADM144", name: "MWIRIGI" },
+  { tag: "ADM145", name: "KAARI" },
+  { tag: "ADM147", name: "KOBIA" },
+  { tag: "ADM148", name: "KAIRITHI" },
+  { tag: "ADM150", name: "KITHINJI" },
+  { tag: "ADM151", name: "KAARI" },
+  { tag: "ADM153", name: "MAINGI" },
+  { tag: "ADM154", name: "MUTHONI" },
+  { tag: "ADM156", name: "NYAGA" },
+  { tag: "ADM157", name: "NJAGI" },
+  { tag: "ADM159", name: "MWENDA" },
+  { tag: "ADM160", name: "MBIKI" },
+  { tag: "ADM162", name: "GITONGA" },
+  { tag: "ADM163", name: "KAARI" },
+  { tag: "ADM165", name: "NJERU" },
+  { tag: "ADM166", name: "MWARARI" },
+  { tag: "ADM168", name: "NDWIGA" },
+  { tag: "ADM169", name: "CIOCERA" },
+  { tag: "ADM171", name: "KAGENDO" },
+  { tag: "ADM172", name: "MUTERO" },
+  { tag: "ADM174", name: "MUTHONI" },
+  { tag: "ADM175", name: "KARIUKI" },
+  { tag: "ADM177", name: "WANJIKU" },
+  { tag: "ADM178", name: "GICHERU" },
+  { tag: "ADM180", name: "NYAMBURA" },
+  { tag: "ADM181", name: "KAHURIA" },
+  { tag: "ADM183", name: "NJERI" },
+  { tag: "ADM184", name: "KIMANI" },
+  { tag: "ADM186", name: "WANGUI" },
+  { tag: "ADM187", name: "NG'ANG'A" },
+  { tag: "ADM189", name: "MUTHONI" },
+  { tag: "ADM190", name: "KAMAU" },
+  { tag: "ADM192", name: "WANJIRU" },
+  { tag: "ADM193", name: "MACHARIA" },
+  { tag: "ADM195", name: "NYOKABI" },
+  { tag: "ADM196", name: "MWANGI" },
+  { tag: "ADM198", name: "MUKAMI" },
+  { tag: "ADM199", name: "GICHURU" },
+  { tag: "ADM201", name: "WANGARI" },
+  { tag: "ADM202", name: "KIMANI" },
+  { tag: "ADM204", name: "NJERI" },
+  { tag: "ADM205", name: "KARANJA" },
+  { tag: "ADM207", name: "WANDIA" },
+  { tag: "ADM208", name: "MBUGUA" },
+  { tag: "ADM210", name: "WANJIKU" },
+  { tag: "ADM211", name: "GITHINJI" },
+  { tag: "ADM213", name: "NJOKI" },
+  { tag: "ADM214", name: "NDUNGU" },
+  { tag: "ADM216", name: "WANJA" },
+  { tag: "ADM217", name: "KAGWE" },
+  { tag: "ADM219", name: "MUTHONI" },
+  { tag: "ADM220", name: "KIRAGU" },
+  { tag: "ADM222", name: "NYOKABI" },
+  { tag: "ADM223", name: "KIMATHI" },
+  { tag: "ADM225", name: "KAIRUTI" },
+  { tag: "ADM226", name: "MUTURI" },
+  { tag: "ADM228", name: "MURINGO" },
+  { tag: "ADM229", name: "GITONGA" },
+  { tag: "ADM231", name: "KAARI" },
+  { tag: "ADM232", name: "KATHURI" },
+  { tag: "ADM234", name: "KAGENI" },
+  { tag: "ADM235", name: "MWORIA" },
+  { tag: "ADM237", name: "MKENDA" },
+  { tag: "ADM238", name: "MUTUMA" },
+  { tag: "ADM240", name: "NKATHA" },
+  { tag: "ADM241", name: "KIREMA" },
+  { tag: "ADM243", name: "KAARI" },
+  { tag: "ADM244", name: "MWENDA" },
+  { tag: "ADM246", name: "MENDI" },
+  { tag: "ADM247", name: "KIARIE" },
+  { tag: "ADM249", name: "WANGUI" },
+  { tag: "ADM250", name: "NGIGI" },
+  { tag: "ADM252", name: "WACERA" },
+  { tag: "ADM253", name: "KABUU" },
+  { tag: "ADM255", name: "NYAMBURA" },
+  { tag: "ADM256", name: "MUREITHI" },
+  { tag: "ADM258", name: "WANGUI" },
+  { tag: "ADM259", name: "KAHIGA" },
+  { tag: "ADM261", name: "WANJIRU" },
+  { tag: "ADM262", name: "GATERU" },
+  { tag: "ADM264", name: "MUTHONI" },
+  { tag: "ADM265", name: "MWANGI" },
+  { tag: "ADM267", name: "WANGARI" },
+  { tag: "ADM268", name: "NDUNG'U" },
+  { tag: "ADM270", name: "MUGAMBI" },
+  { tag: "ADM271", name: "KAGENI" },
+  { tag: "ADM273", name: "KITHURE" },
+  { tag: "ADM274", name: "KAANGA" },
+  { tag: "ADM276", name: "KOBIA" },
+  { tag: "ADM277", name: "KENDI" },
+  { tag: "ADM279", name: "M'RIMBERIA" },
+  { tag: "ADM280", name: "NKATHA" },
+  { tag: "ADM282", name: "MWIRIGI" },
+  { tag: "ADM283", name: "KAARI" },
+  { tag: "ADM285", name: "KOBIA" },
+  { tag: "ADM286", name: "KAIRITHI" },
+  { tag: "ADM288", name: "KITHINJI" },
+  { tag: "ADM289", name: "KAARI" },
+  { tag: "ADM291", name: "MAINGI" },
+  { tag: "ADM292", name: "MUTHONI" },
+  { tag: "ADM294", name: "NYAGA" },
+  { tag: "ADM295", name: "NJAGI" },
+  { tag: "ADM297", name: "MWENDA" },
+  { tag: "ADM298", name: "MBIKI" },
+  { tag: "ADM300", name: "GITONGA" },
+  { tag: "ADM301", name: "KAARI" },
+  { tag: "ADM303", name: "NJERU" },
+  { tag: "ADM304", name: "MWARARI" },
+  { tag: "ADM306", name: "NDWIGA" },
+  { tag: "ADM307", name: "CIOCERA" },
+  { tag: "ADM309", name: "KAGENDO" },
+  { tag: "ADM310", name: "MUTERO" },
+  { tag: "ADM312", name: "MUTHONI" },
+  { tag: "ADM313", name: "KARIUKI" },
+  { tag: "ADM315", name: "WANJIKU" },
+  { tag: "ADM316", name: "GICHERU" },
+  { tag: "ADM318", name: "NYAMBURA" },
+  { tag: "ADM319", name: "KAHURIA" },
+  { tag: "ADM321", name: "NJERI" },
+  { tag: "ADM322", name: "KIMANI" },
+  { tag: "ADM324", name: "WANGUI" },
+  { tag: "ADM325", name: "NG'ANG'A" },
+  { tag: "ADM327", name: "MUTHONI" },
+  { tag: "ADM328", name: "KAMAU" },
+  { tag: "ADM330", name: "WANJIRU" },
+  { tag: "ADM331", name: "MACHARIA" },
+  { tag: "ENG101", name: "OTIENO" },
+  { tag: "ENG102", name: "KIPROP" },
+  { tag: "ENG103", name: "MWANGI" },
+  { tag: "ENG104", name: "JEPCHUMBA" },
+  { tag: "ENG105", name: "OMONDI" },
+  { tag: "ENG106", name: "KIMUTAI" },
+  { tag: "ENG107", name: "WAFULA" },
+  { tag: "ENG108", name: "CHEPKEMOI" },
+  { tag: "ENG109", name: "KARIUKI" },
+  { tag: "ENG110", name: "JEPKEMOI" },
+  { tag: "ICT201", name: "KIPKEMOI" },
+  { tag: "ICT202", name: "CHEBET" },
+  { tag: "ICT203", name: "KIBET" },
+  { tag: "ICT204", name: "JEPKORIR" },
+  { tag: "ICT205", name: "KIPTOO" },
+  { tag: "ICT206", name: "CHEPCHUMBA" },
+  { tag: "ICT207", name: "KIPRONO" },
+  { tag: "ICT208", name: "JEBET" },
+  { tag: "ICT209", name: "KIPTANUI" },
+  { tag: "ICT210", name: "CHEPKORIR" },
+  { tag: "MED301", name: "KIPROTICH" },
+  { tag: "MED302", name: "JEPKEMOI" },
+  { tag: "MED303", name: "KIPKORIR" },
+  { tag: "MED304", name: "CHEPKOECH" },
+  { tag: "MED305", name: "KIPCHUMBA" },
+  { tag: "MED306", name: "JEPCHIRCHIR" },
+  { tag: "MED307", name: "KIPKEMOI" },
+  { tag: "MED308", name: "JEPTOO" },
+  { tag: "MED309", name: "KIPTOO" },
+  { tag: "MED310", name: "CHEPKOECH" },
+  { tag: "SCI401", name: "KIPRONO" },
+  { tag: "SCI402", name: "JEPKORIR" },
+  { tag: "SCI403", name: "KIPKEMOI" },
+  { tag: "SCI404", name: "CHEPKOECH" },
+  { tag: "SCI405", name: "KIPCHUMBA" },
+  { tag: "SCI406", name: "JEBET" },
+  { tag: "SCI407", name: "KIPROP" },
+  { tag: "SCI408", name: "CHEPKEMOI" },
+  { tag: "SCI409", name: "KIPTANUI" },
+  { tag: "SCI410", name: "JEPCHUMBA" },
+  { tag: "SPA3240", name: "OMondi" },
+  { tag: "SPA3241", name: "MUTUA" },
+  { tag: "SPA3242", name: "KIPROTICH" },
+  { tag: "SPA3243", name: "CHEPKWEMOI" },
+  { tag: "SPA3244", name: "WAFULA" },
+  { tag: "SPA3245", name: "BARASA" },
+  { tag: "SPA3246", name: "OTIENO" },
+  { tag: "SPA3247", name: "AKOTH" },
+  { tag: "SPA3248", name: "KARIUKI" },
+  { tag: "SPA3249", name: "WANJIKU" },
+  { tag: "SPA3250", name: "KIMANI" },
+  { tag: "SPA3251", name: "NJERI" },
+  { tag: "SPA3252", name: "ODHIAMBO" },
+  { tag: "SPA3253", name: "ACHIENG" },
+  { tag: "SPA3254", name: "OMWEGA" },
+  { tag: "SPA3255", name: "MOGAKA" },
+  { tag: "SPA3256", name: "NYAMACHE" },
+  { tag: "SPA3257", name: "KIBET" },
+  { tag: "SPA3258", name: "NYANJE" },
+  { tag: "SPA3259", name: "KIPKORIR" },
+  { tag: "SPA3260", name: "OCHIENG" },
+  { tag: "SPA3261", name: "SHIDIKHA" }
+];
 
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+// Authentication API Route
+app.post('/api/login', (req, res) => {
+    const { tag, name } = req.body;
+    
+    if (!tag || !name) {
+        return res.status(400).json({ success: false, message: "Please provide both Tag ID and Name." });
+    }
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, 'uploads/'),
-    filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
-});
-const upload = multer({ storage: storage });
+    // Match uppercase input against the database
+    const cleanTag = tag.trim().toUpperCase();
+    const cleanName = name.trim().toUpperCase();
 
-const dbPath = path.join(__dirname, 'voting.db');
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('Database connection error:', err.message);
+    const voter = VOTERS_DATABASE.find(v => v.tag === cleanTag && v.name === cleanName);
+
+    if (voter) {
+        return res.json({ success: true, message: "Authentication successful!", voter });
     } else {
-        console.log('Connected to SQLite database.');
-        
-        db.run(`CREATE TABLE IF NOT EXISTS categories (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL
-        )`);
-
-        db.run(`CREATE TABLE IF NOT EXISTS nominees (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            category_id INTEGER,
-            name TEXT NOT NULL,
-            image TEXT,
-            FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE CASCADE
-        )`);
-
-        db.run(`CREATE TABLE IF NOT EXISTS votes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            employee_id TEXT,
-            category_id INTEGER,
-            nominee_id INTEGER,
-            UNIQUE(employee_id, category_id)
-        )`);
-
-        db.run(`CREATE TABLE IF NOT EXISTS employees (
-            employee_id TEXT PRIMARY KEY,
-            name TEXT NOT NULL
-        )`, () => {
-            db.get(`SELECT COUNT(*) as count FROM employees`, (err, row) => {
-                if (row && row.count === 0) {
-                    db.run(`INSERT INTO employees (employee_id, name) VALUES ('ACT1505', 'Irene')`);
-                    db.run(`INSERT INTO employees (employee_id, name) VALUES ('ACT1001', 'Dennis')`);
-                }
-            });
-        });
+        return res.status(401).json({ success: false, message: "Invalid Tag ID or Voter Name combination." });
     }
 });
 
-// --- VOTER ROUTES ---
-app.post('/api/voter/login', (req, res) => {
-    let { employeeId } = req.body;
-    if (!employeeId) return res.status(400).json({ success: false, error: 'Employee ID is required' });
-    employeeId = employeeId.trim();
-
-    db.get(`SELECT name FROM employees WHERE employee_id = ?`, [employeeId], (err, row) => {
-        if (err) return res.status(500).json({ success: false, error: 'Database error' });
-        
-        const employeeName = row ? row.name : 'Colleague';
-        req.session.employeeId = employeeId;
-        req.session.employeeName = employeeName;
-        res.json({ success: true, name: employeeName });
-    });
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Voting server running on port ${PORT}`);
 });
-
-app.get('/api/voter/ballot-data', (req, res) => {
-    if (!req.session.employeeId) return res.status(401).json({ error: 'Unauthorized' });
-
-    db.all("SELECT * FROM categories", [], (err, categories) => {
-        db.all("SELECT * FROM nominees", [], (err2, nominees) => {
-            db.all("SELECT category_id FROM votes WHERE employee_id = ?", [req.session.employeeId], (err3, userVotes) => {
-                res.json({ 
-                    employeeName: req.session.employeeName || 'Colleague',
-                    categories: categories || [], 
-                    nominees: nominees || [], 
-                    votedCategories: (userVotes || []).map(v => v.category_id) 
-                });
-            });
-        });
-    });
-});
-
-// Fixed Batch Vote Handler
-app.post('/api/voter/vote', (req, res) => {
-    if (!req.session.employeeId) return res.status(401).json({ success: false, error: 'Unauthorized' });
-    const { votes } = req.body; // Expects { categoryId: nomineeId, ... }
-
-    if (!votes || typeof votes !== 'object' || Object.keys(votes).length === 0) {
-        return res.status(400).json({ success: false, error: 'No votes provided' });
-    }
-
-    db.all("SELECT category_id FROM votes WHERE employee_id = ?", [req.session.employeeId], (err, existingVotes) => {
-        if (err) return res.status(500).json({ success: false, error: err.message });
-
-        const votedCategories = new Set(existingVotes.map(v => v.category_id));
-        
-        for (let catId of Object.keys(votes)) {
-            if (votedCategories.has(Number(catId))) {
-                return res.status(400).json({ success: false, error: 'You have already voted in one or more of these categories.' });
-            }
-        }
-
-        const entries = Object.entries(votes);
-        let completed = 0;
-        let hasError = false;
-
-        entries.forEach(([catId, nomineeId]) => {
-            db.run(
-                "INSERT INTO votes (employee_id, category_id, nominee_id) VALUES (?, ?, ?)",
-                [req.session.employeeId, Number(catId), Number(nomineeId)],
-                (err) => {
-                    if (err && !hasError) {
-                        hasError = true;
-                        return res.status(500).json({ success: false, error: err.message });
-                    }
-                    completed++;
-                    if (completed === entries.length && !hasError) {
-                        res.json({ success: true, message: 'All votes recorded successfully!' });
-                    }
-                }
-            );
-        });
-    });
-});
-
-// --- ADMIN ROUTES ---
-app.post('/api/admin/login', (req, res) => {
-    const { password } = req.body;
-    if (password === 'admin123') {
-        req.session.isAdmin = true;
-        return res.json({ success: true });
-    }
-    res.status(401).json({ success: false, error: 'Incorrect password' });
-});
-
-function requireAdmin(req, res, next) {
-    if (req.session && req.session.isAdmin) return next();
-    res.status(401).json({ error: 'Unauthorized' });
-}
-
-app.get('/api/admin/data', requireAdmin, (req, res) => {
-    db.all("SELECT * FROM categories", [], (err, categories) => {
-        db.all("SELECT * FROM nominees", [], (err2, nominees) => {
-            // Fixed Tally Query to accurately group and count votes per nominee
-            db.all(`SELECT nominee_id, COUNT(*) as vote_count FROM votes GROUP BY nominee_id`, [], (err3, tallies) => {
-                db.all("SELECT * FROM employees", [], (err4, employees) => {
-                    res.json({ 
-                        categories: categories || [], 
-                        nominees: nominees || [], 
-                        tallies: tallies || [],
-                        employees: employees || []
-                    });
-                });
-            });
-        });
-    });
-});
-
-app.post('/api/admin/category', requireAdmin, (req, res) => {
-    const { name } = req.body;
-    db.run("INSERT INTO categories (name) VALUES (?)", [name], function(err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true, id: this.lastID });
-    });
-});
-
-app.post('/api/admin/nominee', requireAdmin, upload.single('image'), (req, res) => {
-    const { categoryId, name } = req.body;
-    const imagePath = req.file ? `/uploads/${req.file.filename}` : null;
-    db.run("INSERT INTO nominees (category_id, name, image) VALUES (?, ?, ?)", [categoryId, name, imagePath], function(err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true });
-    });
-});
-
-app.post('/api/admin/employee', requireAdmin, (req, res) => {
-    const { employeeId, name } = req.body;
-    db.run("INSERT OR REPLACE INTO employees (employee_id, name) VALUES (?, ?)", [employeeId.trim(), name.trim()], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true });
-    });
-});
-
-app.delete('/api/admin/category/:id', requireAdmin, (req, res) => {
-    db.run("DELETE FROM categories WHERE id = ?", [req.params.id], () => res.json({ success: true }));
-});
-
-app.delete('/api/admin/nominee/:id', requireAdmin, (req, res) => {
-    db.run("DELETE FROM nominees WHERE id = ?", [req.params.id], () => res.json({ success: true }));
-});
-
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
