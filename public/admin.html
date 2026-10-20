@@ -3,175 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard & Live Tally</title>
+    <title>Swahili Beach - Admin Login</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        h1, h2 { color: #333; }
-        .section { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
-        input, select { padding: 10px; margin-right: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-        button { background-color: #2ecc71; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 14px; }
-        button:hover { background-color: #27ae60; }
-        .delete-btn { background-color: #e74c3c; padding: 5px 10px; }
-        ul { padding-left: 20px; }
-        li { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; max-width: 600px; }
-        .tally-item { font-weight: bold; color: #2980b9; }
-        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 999; }
-        .login-box { background: white; padding: 30px; border-radius: 8px; text-align: center; width: 300px; }
-        .error { color: red; font-size: 13px; margin-top: 10px; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #343a40;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .admin-card {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .logo {
+            max-width: 140px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 16px;
+            box-sizing: border-box;
+            outline: none;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background-color: #218838;
+        }
+        #error-msg {
+            color: #d9534f;
+            margin-top: 15px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
 
-    <div id="loginOverlay">
-        <div class="login-box">
-            <h2>Admin Login</h2>
-            <form id="adminLoginForm">
-                <input type="password" id="adminPassword" placeholder="Admin Password" required style="width: 100%; margin-bottom: 15px; box-sizing: border-box;">
-                <button type="submit" style="width: 100%;">Login</button>
-                <div id="loginError" class="error"></div>
-            </form>
-        </div>
-    </div>
-
-    <div class="container" id="adminContent" style="display: none;">
-        <h1>⚙️ Admin Dashboard & Live Tally</h1>
+    <div class="admin-card">
+        <img src="logo.png" alt="Swahili Beach Logo" class="logo">
+        <h2>Admin Login</h2>
         
-        <!-- Live Tally Section -->
-        <div class="section">
-            <h2>📊 Live Vote Tally</h2>
-            <div id="tallyContainer">Loading live results...</div>
-        </div>
+        <form id="adminLoginForm">
+            <div class="form-group">
+                <label for="password">Admin Password</label>
+                <input type="password" id="password" name="password" placeholder="Enter admin password" required>
+            </div>
+            
+            <button type="submit" class="btn">Login</button>
+        </form>
 
-        <!-- Manage Categories -->
-        <div class="section">
-            <h2>Manage Categories</h2>
-            <form id="categoryForm">
-                <input type="text" id="categoryName" placeholder="Category Name" required>
-                <button type="submit">Add Category</button>
-            </form>
-            <ul id="categoryList"></ul>
-        </div>
-
-        <!-- Manage Nominees -->
-        <div class="section">
-            <h2>Manage Nominees (with Picture)</h2>
-            <form id="nomineeForm" enctype="multipart/form-data">
-                <select id="categorySelect" required>
-                    <option value="">Select Category</option>
-                </select>
-                <input type="text" id="nomineeName" placeholder="Nominee Name" required>
-                <input type="file" id="nomineeImage" accept="image/*">
-                <button type="submit">Add Nominee</button>
-            </form>
-            <ul id="nomineeList"></ul>
-        </div>
+        <div id="error-msg"></div>
     </div>
 
     <script>
         document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const password = document.getElementById('adminPassword').value;
-            const res = await fetch('/api/admin/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password })
-            });
-            const data = await res.json();
-            if (data.success) {
-                document.getElementById('loginOverlay').style.display = 'none';
-                document.getElementById('adminContent').style.display = 'block';
-                fetchAdminData();
-                setInterval(fetchAdminData, 5000); // Auto-refresh tallies every 5 seconds
-            } else {
-                document.getElementById('loginError').textContent = 'Incorrect password';
-            }
-        });
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('error-msg');
+            errorDiv.textContent = '';
 
-        async function fetchAdminData() {
             try {
-                const res = await fetch('/api/admin/data');
-                if (res.status === 401) return;
-                const data = await res.json();
-
-                const categoryList = document.getElementById('categoryList');
-                const categorySelect = document.getElementById('categorySelect');
-                const nomineeList = document.getElementById('nomineeList');
-                const tallyContainer = document.getElementById('tallyContainer');
-
-                categoryList.innerHTML = '';
-                categorySelect.innerHTML = '<option value="">Select Category</option>';
-                nomineeList.innerHTML = '';
-                tallyContainer.innerHTML = '';
-
-                // Categories
-                data.categories.forEach(cat => {
-                    categoryList.innerHTML += `<li>${cat.name} <button class="delete-btn" onclick="deleteCategory(${cat.id})">Delete</button></li>`;
-                    categorySelect.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+                const response = await fetch('/api/admin-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
                 });
 
-                // Nominees
-                data.nominees.forEach(nom => {
-                    const cat = data.categories.find(c => c.id === nom.category_id);
-                    nomineeList.innerHTML += `<li>${nom.name} (${cat ? cat.name : 'Unassigned'}) <button class="delete-btn" onclick="deleteNominee(${nom.id})">Delete</button></li>`;
-                });
+                const data = await response.json();
 
-                // Live Tally
-                data.categories.forEach(cat => {
-                    let tallyHtml = `<h4>${cat.name}</h4><ul>`;
-                    const catNominees = data.nominees.filter(n => n.category_id === cat.id);
-                    catNominees.forEach(nom => {
-                        const tally = data.tallies.find(t => t.nominee_id === nom.id);
-                        const count = tally ? tally.vote_count : 0;
-                        tallyHtml += `<li>${nom.name} <span class="tally-item">${count} Votes</span></li>`;
-                    });
-                    tallyHtml += `</ul>`;
-                    tallyContainer.innerHTML += tallyHtml;
-                });
+                if (response.ok && data.success) {
+                    localStorage.setItem('isAdminAuthenticated', 'true');
+                    window.location.href = 'admin-dashboard.html'; // or your main tally page
+                } else {
+                    errorDiv.textContent = data.message || 'Incorrect password.';
+                }
             } catch (err) {
-                console.error(err);
+                errorDiv.textContent = 'Connection error. Please try again.';
             }
-        }
-
-        document.getElementById('categoryForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = document.getElementById('categoryName').value;
-            await fetch('/api/admin/category', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name })
-            });
-            document.getElementById('categoryName').value = '';
-            fetchAdminData();
         });
-
-        document.getElementById('nomineeForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData();
-            formData.append('categoryId', document.getElementById('categorySelect').value);
-            formData.append('name', document.getElementById('nomineeName').value);
-            const imageFile = document.getElementById('nomineeImage').files[0];
-            if (imageFile) formData.append('image', imageFile);
-
-            await fetch('/api/admin/nominee', { method: 'POST', body: formData });
-            document.getElementById('nomineeName').value = '';
-            document.getElementById('nomineeImage').value = '';
-            fetchAdminData();
-        });
-
-        async function deleteCategory(id) {
-            if (confirm('Delete category?')) {
-                await fetch(`/api/admin/category/${id}`, { method: 'DELETE' });
-                fetchAdminData();
-            }
-        }
-
-        async function deleteNominee(id) {
-            if (confirm('Delete nominee?')) {
-                await fetch(`/api/admin/nominee/${id}`, { method: 'DELETE' });
-                fetchAdminData();
-            }
-        }
     </script>
+
 </body>
 </html>

@@ -88,9 +88,7 @@
 <body>
 
     <div class="login-card">
-        <!-- Swahili Beach Logo -->
         <img src="logo.png" alt="Swahili Beach Logo" class="logo">
-        
         <h2>Employee Voting Portal</h2>
         
         <form id="loginForm">
@@ -127,11 +125,10 @@
 
                 if (response.ok && data.success) {
                     successDiv.textContent = `Welcome, ${data.voter.name}! Redirecting...`;
-                    // Store voter info and redirect to ballot page after 1.5 seconds
                     localStorage.setItem('voter', JSON.stringify(data.voter));
                     setTimeout(() => {
-                        window.location.href = 'vote.html'; // Change to your actual voting ballot page if named differently
-                    }, 1500);
+                        window.location.href = 'voting.html';
+                    }, 1200);
                 } else {
                     errorDiv.textContent = data.message || 'Invalid Employee Number.';
                 }

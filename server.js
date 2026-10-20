@@ -5,7 +5,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static frontend files from 'public' folder
+// Serve all frontend files from the 'public' folder
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Complete Voter Records Database (Parsed from voting tags.xlsx)
@@ -309,14 +309,12 @@ const VOTERS_DATABASE = [
   { tag: "SPA3261", name: "SHIDIKHA" }
 ];
 
-// Voter Login Route: Looks up by Employee Number (Tag) and returns the matched name
+// Voter Login Route
 app.post('/api/login', (req, res) => {
     const { tag } = req.body;
-    
     if (!tag) {
         return res.status(400).json({ success: false, message: "Please provide an Employee Number." });
     }
-
     const cleanTag = tag.trim().toUpperCase();
     const voter = VOTERS_DATABASE.find(v => v.tag === cleanTag);
 
@@ -327,7 +325,7 @@ app.post('/api/login', (req, res) => {
     }
 });
 
-// Admin Login Route (Change password 'admin123' if needed)
+// Admin Login Route
 app.post('/api/admin-login', (req, res) => {
     const { password } = req.body;
     if (password === "admin123") {
