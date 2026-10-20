@@ -15,18 +15,8 @@ app.use(session({
     saveUninitialized: true
 }));
 
-// Serve static files from the 'public' folder
+// This automatically serves any static files (HTML, CSS, JS) inside the 'public' folder
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Route for the main voter page
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html')); 
-});
-
-// Route for the admin dashboard
-app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
