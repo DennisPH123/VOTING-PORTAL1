@@ -4,7 +4,7 @@ const session = require('express-session');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 // Middleware
 app.use(express.urlencoded({ extended: true }));
@@ -15,17 +15,17 @@ app.use(session({
     saveUninitialized: true
 }));
 
-// Serve static files from the root directory
-app.use(express.static(__dirname));
+// Serve static files from the 'public' folder
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Route for the main homepage (change 'index.html' if your home page has a different filename)
+// Route for the main voter page
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html')); 
+    res.sendFile(path.join(__dirname, 'public', 'index.html')); 
 });
 
-// Explicit route for the admin dashboard
+// Route for the admin dashboard
 app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'admin.html'));
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
 app.listen(PORT, () => {
