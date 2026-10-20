@@ -1,8 +1,12 @@
 const express = require('express');
+const path = require('path');
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// CRITICAL: This line serves all HTML, CSS, and JS files inside your 'public' folder
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Complete Voter Records Database (Parsed from voting tags.xlsx)
 const VOTERS_DATABASE = [
@@ -313,7 +317,6 @@ app.post('/api/login', (req, res) => {
         return res.status(400).json({ success: false, message: "Please provide both Tag ID and Name." });
     }
 
-    // Match uppercase input against the database
     const cleanTag = tag.trim().toUpperCase();
     const cleanName = name.trim().toUpperCase();
 
