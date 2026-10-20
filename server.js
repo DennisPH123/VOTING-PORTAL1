@@ -46,13 +46,31 @@ app.post('/api/voter/login', (req, res) => {
     const { employeeId } = req.body;
     if (!employeeId) return res.status(400).json({ success: false, error: 'Employee ID is required' });
 
-    // Save voter session
     req.session.employeeId = employeeId;
     res.json({ success: true, message: 'Login successful' });
 });
 
-// --- ADMIN API ROUTES ---
-app.get('/api/admin/data', (req, res) => {
+// --- ADMIN LOGIN ROUTE (Password: admin123 - change as needed) ---
+app.post('/api/admin/login', (req, res) => {
+    const { password } = req.body;
+    // You can change 'admin123' to whatever password you want for your admin panel
+    if (password === 'admin123') {
+        req.session.isAdmin = true;
+        return res.json({ success: true });
+    }
+    res.status(401).json({ success: false, error: 'Incorrect password' });
+});
+
+// Middleware to protect admin routes
+function requireAdmin(req, res, next) {
+    if (req.session && req.session.isAdmin) {
+        return next();
+    }
+    res.status(401).json({ error: 'Unauthorized' });
+}
+
+// --- ADMIN API ROUTES (Protected) ---
+app.get('/api/admin/data', requireAdmin, (req, res) => {
     db.all("SELECT * FROM categories", [], (err, categories) => {
         if (err) return res.status(500).json({ error: err.message });
         
@@ -63,7 +81,7 @@ app.get('/api/admin/data', (req, res) => {
     });
 });
 
-app.post('/api/admin/category', (req, res) => {
+app.post('/api/admin/category', requireAdmin, (req, res) => {
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: 'Category name is required' });
 
@@ -73,7 +91,7 @@ app.post('/api/admin/category', (req, res) => {
     });
 });
 
-app.post('/api/admin/nominee', (req, res) => {
+app.post('/api/admin/nominee', requireAdmin, (req, res) => {
     const { categoryId, name } = req.body;
     if (!categoryId || !name) return res.status(400).json({ error: 'Category and nominee name are required' });
 
@@ -83,7 +101,7 @@ app.post('/api/admin/nominee', (req, res) => {
     });
 });
 
-app.delete('/api/admin/category/:id', (req, res) => {
+app.delete('/api/admin/category/:id', requireAdmin, (req, res) => {
     const { id } = req.params;
     db.run("DELETE FROM categories WHERE id = ?", [id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -91,7 +109,7 @@ app.delete('/api/admin/category/:id', (req, res) => {
     });
 });
 
-app.delete('/api/admin/nominee/:id', (req, res) => {
+app.delete('/api/admin/nominee/:id', requireAdmin, (req, res) => {
     const { id } = req.params;
     db.run("DELETE FROM nominees WHERE id = ?", [id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
