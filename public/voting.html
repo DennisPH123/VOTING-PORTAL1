@@ -28,7 +28,7 @@
 
     <div id="ballot-container">Loading ballot categories...</div>
 
-    <button class="btn" onclick="submitVotes()">Submit All Votes</button>
+    <button class="btn" id="submit-btn" onclick="submitVotes()">Submit All Votes</button>
 </div>
 
 <script>
@@ -76,17 +76,25 @@
             return;
         }
 
-        for (const [categoryId, nomineeId] of Object.entries(selectedVotes)) {
-            await fetch('/api/vote', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ categoryId, nomineeId })
-            });
-        }
+        try {
+            for (const [categoryId, nomineeId] of Object.entries(selectedVotes)) {
+                await fetch('/api/vote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        tag: voter.tag, 
+                        categoryId: categoryId, 
+                        nomineeId: nomineeId 
+                    })
+                });
+            }
 
-        alert('Thank you! Your votes have been successfully recorded.');
-        localStorage.removeItem('voter');
-        window.location.href = 'index.html';
+            alert('Thank you! Your votes have been successfully recorded.');
+            localStorage.removeItem('voter');
+            window.location.href = 'index.html';
+        } catch (err) {
+            alert('Network error while submitting votes. Please try again.');
+        }
     }
 
     loadBallot();

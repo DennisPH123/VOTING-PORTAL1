@@ -378,7 +378,7 @@ const VOTERS_DATABASE = [
   { tag: "SPA3261", name: "SHIDIKHA" }
 ];
 
-// Login Endpoint with flexible tag matching & single-vote restriction
+// Login Endpoint
 app.post('/api/login', (req, res) => {
     const { tag } = req.body;
     if (!tag) return res.status(400).json({ success: false, message: "Provide employee number." });
@@ -456,8 +456,9 @@ app.delete('/api/admin/nominee/:categoryId/:nomineeId', (req, res) => {
     }
 });
 
+// Updated Vote Endpoint for individual category/nominee increments
 app.post('/api/vote', (req, res) => {
-    const { tag, votes } = req.body;
+    const { tag, categoryId, nomineeId } = req.body;
     
     if (!tag) {
         return res.status(400).json({ success: false, message: "Voter tag missing." });
@@ -474,23 +475,16 @@ app.post('/api/vote', (req, res) => {
         return res.status(403).json({ success: false, message: "You have already voted!" });
     }
 
-    if (!votes || typeof votes !== 'object') {
-        return res.status(400).json({ success: false, message: "No votes provided." });
-    }
-
-    for (const [categoryId, nomineeId] of Object.entries(votes)) {
-        const category = votingData.categories.find(c => c.id === categoryId);
-        if (category) {
-            const nominee = category.nominees.find(n => n.id === nomineeId);
-            if (nominee) {
-                nominee.votes += 1;
-            }
+    const category = votingData.categories.find(c => c.id === categoryId);
+    if (category) {
+        const nominee = category.nominees.find(n => n.id === nomineeId);
+        if (nominee) {
+            nominee.votes += 1;
         }
     }
 
     votedTags.add(voter.tag);
-
-    res.json({ success: true, message: "Votes recorded successfully!" });
+    res.json({ success: true, message: "Vote recorded successfully!" });
 });
 
 const PORT = process.env.PORT || 3000;
