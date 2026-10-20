@@ -3,45 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Voting Portal</title>
+    <title>Swahili Beach - Voting Portal</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
-        input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
-        button { background-color: #3498db; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; font-size: 16px; cursor: pointer; }
-        button:hover { background-color: #2980b9; }
-        .error { color: #e74c3c; margin-top: 10px; font-size: 14px; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .login-card {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .logo {
+            max-width: 160px;
+            height: auto;
+            margin-bottom: 25px;
+        }
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 16px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        input:focus {
+            border-color: #0056b3;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #0056b3;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #004085;
+        }
+        #error-msg {
+            color: #d9534f;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        #success-msg {
+            color: #28a745;
+            margin-top: 15px;
+            font-size: 16px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2>🏆 Employee Voting Portal</h2>
+
+    <div class="login-card">
+        <!-- Swahili Beach Logo -->
+        <img src="logo.png" alt="Swahili Beach Logo" class="logo">
+        
+        <h2>Employee Voting Portal</h2>
+        
         <form id="loginForm">
-            <label style="display:block; text-align:left; margin-bottom:8px; font-weight:bold; color:#555;">Enter Employee ID:</label>
-            <input type="text" id="employeeId" placeholder="e.g. ACT1505" required>
-            <button type="submit">Proceed to Ballot</button>
-            <div id="errorMsg" class="error"></div>
+            <div class="form-group">
+                <label for="tag">Employee Number / Tag ID</label>
+                <input type="text" id="tag" name="tag" placeholder="e.g. ACT1505 or ADM 010" required autocomplete="off">
+            </div>
+            
+            <button type="submit" class="btn">Login to Vote</button>
         </form>
+
+        <div id="error-msg"></div>
+        <div id="success-msg"></div>
     </div>
 
     <script>
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const employeeId = document.getElementById('employeeId').value.trim();
-            const errorMsg = document.getElementById('errorMsg');
+            const tag = document.getElementById('tag').value.trim();
+            const errorDiv = document.getElementById('error-msg');
+            const successDiv = document.getElementById('success-msg');
 
-            const res = await fetch('/api/voter/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ employeeId })
-            });
-            const result = await res.json();
-            if (result.success) {
-                window.location.href = '/voting.html';
-            } else {
-                errorMsg.textContent = result.error || 'Login failed';
+            errorDiv.textContent = '';
+            successDiv.textContent = '';
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tag })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    successDiv.textContent = `Welcome, ${data.voter.name}! Redirecting...`;
+                    // Store voter info and redirect to ballot page after 1.5 seconds
+                    localStorage.setItem('voter', JSON.stringify(data.voter));
+                    setTimeout(() => {
+                        window.location.href = 'vote.html'; // Change to your actual voting ballot page if named differently
+                    }, 1500);
+                } else {
+                    errorDiv.textContent = data.message || 'Invalid Employee Number.';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Connection error. Please try again.';
             }
         });
     </script>
+
 </body>
 </html>

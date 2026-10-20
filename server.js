@@ -2,11 +2,10 @@ const express = require('express');
 const path = require('path');
 const app = express();
 
-// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve all frontend HTML/CSS/JS files from the 'public' folder
+// Serve static frontend files from 'public' folder
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Complete Voter Records Database (Parsed from voting tags.xlsx)
@@ -310,32 +309,39 @@ const VOTERS_DATABASE = [
   { tag: "SPA3261", name: "SHIDIKHA" }
 ];
 
-// Authentication API Route
+// Voter Login Route: Looks up by Employee Number (Tag) and returns the matched name
 app.post('/api/login', (req, res) => {
-    const { tag, name } = req.body;
+    const { tag } = req.body;
     
-    if (!tag || !name) {
-        return res.status(400).json({ success: false, message: "Please provide both Tag ID and Name." });
+    if (!tag) {
+        return res.status(400).json({ success: false, message: "Please provide an Employee Number." });
     }
 
     const cleanTag = tag.trim().toUpperCase();
-    const cleanName = name.trim().toUpperCase();
-
-    const voter = VOTERS_DATABASE.find(v => v.tag === cleanTag && v.name === cleanName);
+    const voter = VOTERS_DATABASE.find(v => v.tag === cleanTag);
 
     if (voter) {
-        return res.json({ success: true, message: "Authentication successful!", voter });
+        return res.json({ success: true, message: "Login successful", voter });
     } else {
-        return res.status(401).json({ success: false, message: "Invalid Tag ID or Voter Name combination." });
+        return res.status(401).json({ success: false, message: "Invalid Employee Number." });
     }
 });
 
-// Fallback route to serve index.html for any unhandled routes
+// Admin Login Route (Change password 'admin123' if needed)
+app.post('/api/admin-login', (req, res) => {
+    const { password } = req.body;
+    if (password === "admin123") {
+        return res.json({ success: true, message: "Admin authenticated" });
+    } else {
+        return res.status(401).json({ success: false, message: "Incorrect Admin Password" });
+    }
+});
+
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Voting server running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
