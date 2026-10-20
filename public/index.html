@@ -5,158 +5,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employee Voting Portal</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; color: #333; }
-        .container { max-width: 800px; margin: auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
-        h1 { color: #2c3e50; text-align: center; margin-bottom: 25px; }
-        .auth-box { background: #fafbfc; border: 1px solid #e1e4e8; padding: 25px; border-radius: 8px; margin-bottom: 20px; max-width: 500px; margin-left: auto; margin-right: auto; text-align: center; }
-        label { font-weight: bold; display: block; margin-bottom: 8px; }
-        input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-bottom: 15px; }
-        
-        /* Category Sections */
-        .category-section { background: #fafbfc; border: 1px solid #e1e4e8; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        .category-title { color: #2c3e50; margin-top: 0; border-bottom: 2px solid #3498db; padding-bottom: 8px; font-size: 20px; }
-        .nominees-grid { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 15px; justify-content: flex-start; }
-        .nominee-card { background: white; padding: 15px; border-radius: 8px; border: 2px solid #e1e4e8; text-align: center; width: 140px; cursor: pointer; transition: all 0.2s ease; }
-        .nominee-card:hover { border-color: #3498db; transform: translateY(-2px); }
-        .nominee-card.selected { border-color: #2ecc71; background: #ebf9f1; }
-        .nominee-card img { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; border: 2px solid #ddd; }
-        
-        button { background: #3498db; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; transition: background 0.2s; }
-        button:hover { background: #2980b9; }
-        .hidden { display: none; }
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        h2 { color: #333; margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
+        button { background-color: #3498db; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; font-size: 16px; cursor: pointer; }
+        button:hover { background-color: #2980b9; }
+        .error { color: #e74c3c; margin-top: 10px; font-size: 14px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>🏆 Employee Voting Portal</h1>
-    
-    <!-- Step 1: Employee Authentication -->
-    <div id="voter-auth" class="auth-box">
-        <label for="employee-id">Enter Your Employee ID to Begin:</label>
-        <input type="text" id="employee-id" placeholder="e.g. ACT1505">
-        <button onclick="startVoting()">Proceed to Voting</button>
-        <p id="auth-error" style="color: #e74c3c; margin-top: 10px;"></p>
+    <div class="card">
+        <h2>🏆 Employee Voting Portal</h2>
+        <form id="loginForm">
+            <label for="employeeId" style="display:block; text-align:left; margin-bottom:8px; font-weight:bold; color:#555;">Enter Your Employee ID to Begin:</label>
+            <input type="text" id="employeeId" placeholder="e.g. ACT1505" required>
+            <button type="submit">Proceed to Voting</button>
+            <div id="errorMsg" class="error"></div>
+        </form>
     </div>
 
-    <!-- Step 2: Independent Categories Interface -->
-    <div id="voting-section" class="hidden">
-        <div style="background: #eef2f7; padding: 15px; border-radius: 8px; margin-bottom: 25px; text-align: center;">
-            <p style="margin: 0; font-size: 16px;">Welcome, <span id="display-emp-id" style="font-weight: bold; color: #3498db;"></span>!</p>
-            <p style="margin: 5px 0 0 0; font-size: 13px; color: #666;">Please make your choice in each category below and submit.</p>
-        </div>
-        
-        <div id="independent-categories-container"></div>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const employeeId = document.getElementById('employeeId').value.trim();
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.textContent = '';
 
-        <button onclick="submitVotes()" style="background: #2ecc71; margin-top: 20px; padding: 15px; font-size: 18px;">Submit All Votes</button>
-    </div>
-</div>
-
-<script>
-    let currentEmployeeId = '';
-    let globalVotingData = [];
-    let selectedVotes = {}; // category_id -> nominee_id
-
-    async function startVoting() {
-        const empIdInput = document.getElementById('employee-id').value.trim();
-        if (!empIdInput) {
-            document.getElementById('auth-error').innerText = 'Please enter a valid Employee ID.';
-            return;
-        }
-
-        // Verify against backend employee list
-        const checkRes = await fetch('/api/verify-employee', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ employee_id: empIdInput })
-        });
-        const checkData = await checkRes.json();
-
-        if (!checkRes.ok) {
-            document.getElementById('auth-error').innerText = checkData.error;
-            return;
-        }
-
-        currentEmployeeId = empIdInput;
-        document.getElementById('display-emp-id').innerText = `${checkData.employeeName} (${currentEmployeeId})`;
-        
-        document.getElementById('voter-auth').classList.add('hidden');
-        document.getElementById('voting-section').classList.remove('hidden');
-
-        loadIndependentCategories();
-    }
-
-    async function loadIndependentCategories() {
-        const res = await fetch('/api/voting/data');
-        globalVotingData = await res.json();
-        
-        const container = document.getElementById('independent-categories-container');
-        container.innerHTML = '';
-
-        if (!globalVotingData || globalVotingData.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #7f8c8d;">No voting categories are available right now.</p>';
-            return;
-        }
-
-        globalVotingData.forEach(cat => {
-            let catDiv = document.createElement('div');
-            catDiv.className = 'category-section';
-
-            let html = `<h3 class="category-title">${cat.category_name}</h3>`;
-            html += `<div class="nominees-grid" id="grid-${cat.category_id}">`;
-
-            if (!cat.nominees || cat.nominees.length === 0) {
-                html += `<p style="color: #7f8c8d; font-size: 14px;">No nominees added for this category yet.</p>`;
-            } else {
-                cat.nominees.forEach(nom => {
-                    const isSelected = selectedVotes[cat.category_id] == nom.id ? 'selected' : '';
-                    const imgPath = nom.photo_url ? nom.photo_url : 'https://via.placeholder.com/90';
-
-                    html += `
-                        <div class="nominee-card ${isSelected}" onclick="selectNominee(${cat.category_id}, ${nom.id})">
-                            <img src="${imgPath}" alt="${nom.name}">
-                            <div style="font-size: 14px; font-weight: bold;">${nom.name}</div>
-                        </div>
-                    `;
+            try {
+                const response = await fetch('/api/voter/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ employeeId })
                 });
+
+                const result = await response.json();
+                if (result.success) {
+                    window.location.href = '/voting.html'; // Redirect to ballot page
+                } else {
+                    errorMsg.textContent = result.error || 'Invalid Employee ID';
+                }
+            } catch (err) {
+                errorMsg.textContent = 'Connection error. Please try again.';
             }
-
-            html += `</div>`;
-            catDiv.innerHTML = html;
-            container.appendChild(catDiv);
         });
-    }
-
-    function selectNominee(categoryId, nomineeId) {
-        selectedVotes[categoryId] = nomineeId;
-        // Re-render categories to update selection borders instantly
-        loadIndependentCategories();
-    }
-
-    async function submitVotes() {
-        if (Object.keys(selectedVotes).length === 0) {
-            alert('Please select at least one nominee before submitting.');
-            return;
-        }
-
-        const res = await fetch('/api/votes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                employee_id: currentEmployeeId,
-                votes: selectedVotes
-            })
-        });
-
-        const data = await res.json();
-        if (res.ok) {
-            alert('Votes submitted successfully! Thank you.');
-            location.reload();
-        } else {
-            alert(data.error || 'Failed to submit votes.');
-        }
-    }
-</script>
+    </script>
 
 </body>
 </html>

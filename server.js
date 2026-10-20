@@ -19,7 +19,7 @@ app.use(session({
 // Serve static files from the 'public' folder
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Connect to SQLite Database and Auto-Create Tables if missing
+// Connect to SQLite Database and Auto-Create Tables
 const dbPath = path.join(__dirname, 'voting.db');
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
@@ -27,7 +27,6 @@ const db = new sqlite3.Database(dbPath, (err) => {
     } else {
         console.log('Connected to the SQLite database.');
         
-        // Create tables automatically so queries never fail with "no such table"
         db.run(`CREATE TABLE IF NOT EXISTS categories (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL
@@ -42,8 +41,17 @@ const db = new sqlite3.Database(dbPath, (err) => {
     }
 });
 
-// --- ADMIN API ROUTES ---
+// --- VOTER LOGIN ROUTE ---
+app.post('/api/voter/login', (req, res) => {
+    const { employeeId } = req.body;
+    if (!employeeId) return res.status(400).json({ success: false, error: 'Employee ID is required' });
 
+    // Save voter session
+    req.session.employeeId = employeeId;
+    res.json({ success: true, message: 'Login successful' });
+});
+
+// --- ADMIN API ROUTES ---
 app.get('/api/admin/data', (req, res) => {
     db.all("SELECT * FROM categories", [], (err, categories) => {
         if (err) return res.status(500).json({ error: err.message });
