@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Voting Portal</title>
+    <title>Admin Dashboard & Live Tally</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; }
-        .container { max-width: 800px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .container { max-width: 900px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         h1, h2 { color: #333; }
         .section { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
         input, select { padding: 10px; margin-right: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
         button { background-color: #2ecc71; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 14px; }
         button:hover { background-color: #27ae60; }
         .delete-btn { background-color: #e74c3c; padding: 5px 10px; }
-        .delete-btn:hover { background-color: #c0392b; }
         ul { padding-left: 20px; }
-        li { margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; max-width: 500px; }
+        li { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; max-width: 600px; }
+        .tally-item { font-weight: bold; color: #2980b9; }
         #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 999; }
         .login-box { background: white; padding: 30px; border-radius: 8px; text-align: center; width: 300px; }
         .error { color: red; font-size: 13px; margin-top: 10px; }
@@ -23,12 +23,11 @@
 </head>
 <body>
 
-    <!-- Admin Login Overlay -->
     <div id="loginOverlay">
         <div class="login-box">
             <h2>Admin Login</h2>
             <form id="adminLoginForm">
-                <input type="password" id="adminPassword" placeholder="Enter Admin Password" required style="width: 100%; margin-bottom: 15px; box-sizing: border-box;">
+                <input type="password" id="adminPassword" placeholder="Admin Password" required style="width: 100%; margin-bottom: 15px; box-sizing: border-box;">
                 <button type="submit" style="width: 100%;">Login</button>
                 <div id="loginError" class="error"></div>
             </form>
@@ -36,26 +35,33 @@
     </div>
 
     <div class="container" id="adminContent" style="display: none;">
-        <h1>⚙️ Admin Dashboard</h1>
+        <h1>⚙️ Admin Dashboard & Live Tally</h1>
         
-        <!-- Add Category Section -->
+        <!-- Live Tally Section -->
+        <div class="section">
+            <h2>📊 Live Vote Tally</h2>
+            <div id="tallyContainer">Loading live results...</div>
+        </div>
+
+        <!-- Manage Categories -->
         <div class="section">
             <h2>Manage Categories</h2>
             <form id="categoryForm">
-                <input type="text" id="categoryName" placeholder="New Category Name" required>
+                <input type="text" id="categoryName" placeholder="Category Name" required>
                 <button type="submit">Add Category</button>
             </form>
             <ul id="categoryList"></ul>
         </div>
 
-        <!-- Add Nominee Section -->
+        <!-- Manage Nominees -->
         <div class="section">
-            <h2>Manage Nominees</h2>
-            <form id="nomineeForm">
+            <h2>Manage Nominees (with Picture)</h2>
+            <form id="nomineeForm" enctype="multipart/form-data">
                 <select id="categorySelect" required>
                     <option value="">Select Category</option>
                 </select>
                 <input type="text" id="nomineeName" placeholder="Nominee Name" required>
+                <input type="file" id="nomineeImage" accept="image/*">
                 <button type="submit">Add Nominee</button>
             </form>
             <ul id="nomineeList"></ul>
@@ -63,63 +69,67 @@
     </div>
 
     <script>
-        // Handle Admin Login Submission
         document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const password = document.getElementById('adminPassword').value;
-            const errorDiv = document.getElementById('loginError');
-
-            try {
-                const res = await fetch('/api/admin/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password })
-                });
-                const data = await res.json();
-
-                if (data.success) {
-                    document.getElementById('loginOverlay').style.display = 'none';
-                    document.getElementById('adminContent').style.display = 'block';
-                    fetchAdminData();
-                } else {
-                    errorDiv.textContent = 'Incorrect password';
-                }
-            } catch (err) {
-                errorDiv.textContent = 'Login failed. Try again.';
+            const res = await fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('adminContent').style.display = 'block';
+                fetchAdminData();
+                setInterval(fetchAdminData, 5000); // Auto-refresh tallies every 5 seconds
+            } else {
+                document.getElementById('loginError').textContent = 'Incorrect password';
             }
         });
 
         async function fetchAdminData() {
             try {
                 const res = await fetch('/api/admin/data');
-                if (res.status === 401) {
-                    // Session expired or not logged in
-                    document.getElementById('loginOverlay').style.display = 'flex';
-                    document.getElementById('adminContent').style.display = 'none';
-                    return;
-                }
+                if (res.status === 401) return;
                 const data = await res.json();
-                
+
                 const categoryList = document.getElementById('categoryList');
                 const categorySelect = document.getElementById('categorySelect');
                 const nomineeList = document.getElementById('nomineeList');
+                const tallyContainer = document.getElementById('tallyContainer');
 
                 categoryList.innerHTML = '';
                 categorySelect.innerHTML = '<option value="">Select Category</option>';
                 nomineeList.innerHTML = '';
+                tallyContainer.innerHTML = '';
 
+                // Categories
                 data.categories.forEach(cat => {
                     categoryList.innerHTML += `<li>${cat.name} <button class="delete-btn" onclick="deleteCategory(${cat.id})">Delete</button></li>`;
                     categorySelect.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
                 });
 
+                // Nominees
                 data.nominees.forEach(nom => {
                     const cat = data.categories.find(c => c.id === nom.category_id);
-                    const catName = cat ? cat.name : 'Unassigned';
-                    nomineeList.innerHTML += `<li>${nom.name} <small>(${catName})</small> <button class="delete-btn" onclick="deleteNominee(${nom.id})">Delete</button></li>`;
+                    nomineeList.innerHTML += `<li>${nom.name} (${cat ? cat.name : 'Unassigned'}) <button class="delete-btn" onclick="deleteNominee(${nom.id})">Delete</button></li>`;
+                });
+
+                // Live Tally
+                data.categories.forEach(cat => {
+                    let tallyHtml = `<h4>${cat.name}</h4><ul>`;
+                    const catNominees = data.nominees.filter(n => n.category_id === cat.id);
+                    catNominees.forEach(nom => {
+                        const tally = data.tallies.find(t => t.nominee_id === nom.id);
+                        const count = tally ? tally.vote_count : 0;
+                        tallyHtml += `<li>${nom.name} <span class="tally-item">${count} Votes</span></li>`;
+                    });
+                    tallyHtml += `</ul>`;
+                    tallyContainer.innerHTML += tallyHtml;
                 });
             } catch (err) {
-                console.error('Error fetching admin data:', err);
+                console.error(err);
             }
         }
 
@@ -137,31 +147,31 @@
 
         document.getElementById('nomineeForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const categoryId = document.getElementById('categorySelect').value;
-            const name = document.getElementById('nomineeName').value;
-            await fetch('/api/admin/nominee', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ categoryId, name })
-            });
+            const formData = new FormData();
+            formData.append('categoryId', document.getElementById('categorySelect').value);
+            formData.append('name', document.getElementById('nomineeName').value);
+            const imageFile = document.getElementById('nomineeImage').files[0];
+            if (imageFile) formData.append('image', imageFile);
+
+            await fetch('/api/admin/nominee', { method: 'POST', body: formData });
             document.getElementById('nomineeName').value = '';
+            document.getElementById('nomineeImage').value = '';
             fetchAdminData();
         });
 
         async function deleteCategory(id) {
-            if (confirm('Delete this category?')) {
+            if (confirm('Delete category?')) {
                 await fetch(`/api/admin/category/${id}`, { method: 'DELETE' });
                 fetchAdminData();
             }
         }
 
         async function deleteNominee(id) {
-            if (confirm('Delete this nominee?')) {
+            if (confirm('Delete nominee?')) {
                 await fetch(`/api/admin/nominee/${id}`, { method: 'DELETE' });
                 fetchAdminData();
             }
         }
     </script>
-
 </body>
 </html>

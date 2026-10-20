@@ -7,7 +7,6 @@
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .card { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
-        h2 { color: #333; margin-bottom: 20px; }
         input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
         button { background-color: #3498db; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; font-size: 16px; cursor: pointer; }
         button:hover { background-color: #2980b9; }
@@ -15,13 +14,12 @@
     </style>
 </head>
 <body>
-
     <div class="card">
         <h2>🏆 Employee Voting Portal</h2>
         <form id="loginForm">
-            <label for="employeeId" style="display:block; text-align:left; margin-bottom:8px; font-weight:bold; color:#555;">Enter Your Employee ID to Begin:</label>
+            <label style="display:block; text-align:left; margin-bottom:8px; font-weight:bold; color:#555;">Enter Employee ID:</label>
             <input type="text" id="employeeId" placeholder="e.g. ACT1505" required>
-            <button type="submit">Proceed to Voting</button>
+            <button type="submit">Proceed to Ballot</button>
             <div id="errorMsg" class="error"></div>
         </form>
     </div>
@@ -31,26 +29,19 @@
             e.preventDefault();
             const employeeId = document.getElementById('employeeId').value.trim();
             const errorMsg = document.getElementById('errorMsg');
-            errorMsg.textContent = '';
 
-            try {
-                const response = await fetch('/api/voter/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ employeeId })
-                });
-
-                const result = await response.json();
-                if (result.success) {
-                    window.location.href = '/voting.html'; // Redirect to ballot page
-                } else {
-                    errorMsg.textContent = result.error || 'Invalid Employee ID';
-                }
-            } catch (err) {
-                errorMsg.textContent = 'Connection error. Please try again.';
+            const res = await fetch('/api/voter/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ employeeId })
+            });
+            const result = await res.json();
+            if (result.success) {
+                window.location.href = '/voting.html';
+            } else {
+                errorMsg.textContent = result.error || 'Login failed';
             }
         });
     </script>
-
 </body>
 </html>
