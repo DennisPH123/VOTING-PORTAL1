@@ -2,10 +2,11 @@ const express = require('express');
 const path = require('path');
 const app = express();
 
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// CRITICAL: This line serves all HTML, CSS, and JS files inside your 'public' folder
+// Serve all frontend HTML/CSS/JS files from the 'public' folder
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Complete Voter Records Database (Parsed from voting tags.xlsx)
@@ -327,6 +328,11 @@ app.post('/api/login', (req, res) => {
     } else {
         return res.status(401).json({ success: false, message: "Invalid Tag ID or Voter Name combination." });
     }
+});
+
+// Fallback route to serve index.html for any unhandled routes
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 const PORT = process.env.PORT || 3000;
