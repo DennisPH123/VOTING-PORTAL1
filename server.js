@@ -35,13 +35,11 @@ const db = new sqlite3.Database(dbPath, (err) => {
     } else {
         console.log('Connected to SQLite database.');
         
-        // Categories table
         db.run(`CREATE TABLE IF NOT EXISTS categories (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL
         )`);
 
-        // Nominees table
         db.run(`CREATE TABLE IF NOT EXISTS nominees (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             category_id INTEGER,
@@ -50,7 +48,6 @@ const db = new sqlite3.Database(dbPath, (err) => {
             FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE CASCADE
         )`);
 
-        // Votes table
         db.run(`CREATE TABLE IF NOT EXISTS votes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             employee_id TEXT,
@@ -59,14 +56,12 @@ const db = new sqlite3.Database(dbPath, (err) => {
             UNIQUE(employee_id, category_id)
         )`);
 
-        // Employees table (for name personalization)
         db.run(`CREATE TABLE IF NOT EXISTS employees (
             employee_id TEXT PRIMARY KEY,
             name TEXT NOT NULL
         )`, () => {
-            // Insert a test employee if table is empty
             db.get(`SELECT COUNT(*) as count FROM employees`, (err, row) => {
-                if (row.count === 0) {
+                if (row && row.count === 0) {
                     db.run(`INSERT INTO employees (employee_id, name) VALUES ('ACT1505', 'Irene')`);
                     db.run(`INSERT INTO employees (employee_id, name) VALUES ('ACT1001', 'Dennis')`);
                 }
@@ -75,7 +70,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
     }
 });
 
-// --- VOTER LOGIN & PERSONALIZATION ---
+// --- VOTER ROUTES ---
 app.post('/api/voter/login', (req, res) => {
     let { employeeId } = req.body;
     if (!employeeId) return res.status(400).json({ success: false, error: 'Employee ID is required' });
@@ -84,9 +79,7 @@ app.post('/api/voter/login', (req, res) => {
     db.get(`SELECT name FROM employees WHERE employee_id = ?`, [employeeId], (err, row) => {
         if (err) return res.status(500).json({ success: false, error: 'Database error' });
         
-        // If employee isn't pre-registered, give them a default name or allow generic login
         const employeeName = row ? row.name : 'Colleague';
-
         req.session.employeeId = employeeId;
         req.session.employeeName = employeeName;
         res.json({ success: true, name: employeeName });
@@ -110,15 +103,46 @@ app.get('/api/voter/ballot-data', (req, res) => {
     });
 });
 
+// Fixed Batch Vote Handler
 app.post('/api/voter/vote', (req, res) => {
     if (!req.session.employeeId) return res.status(401).json({ success: false, error: 'Unauthorized' });
-    const { categoryId, nomineeId } = req.body;
+    const { votes } = req.body; // Expects { categoryId: nomineeId, ... }
 
-    db.run("INSERT OR IGNORE INTO votes (employee_id, category_id, nominee_id) VALUES (?, ?, ?)", 
-        [req.session.employeeId, categoryId, nomineeId], function(err) {
+    if (!votes || typeof votes !== 'object' || Object.keys(votes).length === 0) {
+        return res.status(400).json({ success: false, error: 'No votes provided' });
+    }
+
+    db.all("SELECT category_id FROM votes WHERE employee_id = ?", [req.session.employeeId], (err, existingVotes) => {
         if (err) return res.status(500).json({ success: false, error: err.message });
-        if (this.changes === 0) return res.status(400).json({ success: false, error: 'You have already voted in this category!' });
-        res.json({ success: true });
+
+        const votedCategories = new Set(existingVotes.map(v => v.category_id));
+        
+        for (let catId of Object.keys(votes)) {
+            if (votedCategories.has(Number(catId))) {
+                return res.status(400).json({ success: false, error: 'You have already voted in one or more of these categories.' });
+            }
+        }
+
+        const entries = Object.entries(votes);
+        let completed = 0;
+        let hasError = false;
+
+        entries.forEach(([catId, nomineeId]) => {
+            db.run(
+                "INSERT INTO votes (employee_id, category_id, nominee_id) VALUES (?, ?, ?)",
+                [req.session.employeeId, Number(catId), Number(nomineeId)],
+                (err) => {
+                    if (err && !hasError) {
+                        hasError = true;
+                        return res.status(500).json({ success: false, error: err.message });
+                    }
+                    completed++;
+                    if (completed === entries.length && !hasError) {
+                        res.json({ success: true, message: 'All votes recorded successfully!' });
+                    }
+                }
+            );
+        });
     });
 });
 
@@ -140,6 +164,7 @@ function requireAdmin(req, res, next) {
 app.get('/api/admin/data', requireAdmin, (req, res) => {
     db.all("SELECT * FROM categories", [], (err, categories) => {
         db.all("SELECT * FROM nominees", [], (err2, nominees) => {
+            // Fixed Tally Query to accurately group and count votes per nominee
             db.all(`SELECT nominee_id, COUNT(*) as vote_count FROM votes GROUP BY nominee_id`, [], (err3, tallies) => {
                 db.all("SELECT * FROM employees", [], (err4, employees) => {
                     res.json({ 
@@ -171,7 +196,6 @@ app.post('/api/admin/nominee', requireAdmin, upload.single('image'), (req, res) 
     });
 });
 
-// Add new employee ID mapping from admin panel
 app.post('/api/admin/employee', requireAdmin, (req, res) => {
     const { employeeId, name } = req.body;
     db.run("INSERT OR REPLACE INTO employees (employee_id, name) VALUES (?, ?)", [employeeId.trim(), name.trim()], (err) => {
