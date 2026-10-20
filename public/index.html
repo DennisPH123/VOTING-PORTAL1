@@ -3,140 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Swahili Beach - Voting Portal</title>
+    <title>Swahili Beach - Employee Voting Portal</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
-            margin: 0;
-            padding: 0;
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('bg.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
         }
-        .login-card {
-            background: #ffffff;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        .container { 
             width: 100%;
-            max-width: 400px;
-            text-align: center;
+            max-width: 400px; 
+            background: rgba(255, 255, 255, 0.95); 
+            padding: 30px; 
+            border-radius: 8px; 
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3); 
+            text-align: center; 
         }
-        .logo {
-            max-width: 160px;
-            height: auto;
-            margin-bottom: 25px;
-        }
-        h2 {
-            color: #2c3e50;
-            margin-bottom: 20px;
-            font-size: 24px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-            text-align: left;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #555;
-            font-weight: 600;
-        }
-        input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 16px;
-            box-sizing: border-box;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-        input:focus {
-            border-color: #0056b3;
-        }
-        .btn {
-            width: 100%;
-            padding: 12px;
-            background-color: #0056b3;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        .btn:hover {
-            background-color: #004085;
-        }
-        #error-msg {
-            color: #d9534f;
-            margin-top: 15px;
-            font-size: 14px;
-        }
-        #success-msg {
-            color: #28a745;
-            margin-top: 15px;
-            font-size: 16px;
-            font-weight: bold;
-        }
+        .logo { max-width: 140px; display: block; margin: 0 auto 20px; }
+        input, button { width: calc(100% - 22px); padding: 12px; margin: 10px 0; font-size: 16px; border-radius: 6px; }
+        input { border: 1px solid #ccc; border-radius: 4px; }
+        .btn { background: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; }
+        .btn:hover { background: #218838; }
+        .error { color: #dc3545; font-size: 14px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <div class="login-card">
-        <img src="logo.png" alt="Swahili Beach Logo" class="logo">
-        <h2>Employee Voting Portal</h2>
-        
-        <form id="loginForm">
-            <div class="form-group">
-                <label for="tag">Employee Number / Tag ID</label>
-                <input type="text" id="tag" name="tag" placeholder="e.g. ACT1505 or ADM 010" required autocomplete="off">
-            </div>
-            
-            <button type="submit" class="btn">Login to Vote</button>
-        </form>
+<div class="container">
+    <img src="logo.png" alt="Swahili Beach Logo" class="logo" onerror="this.style.display='none'">
+    <h2>Employee Voting Portal</h2>
+    <p style="color: #666; font-size: 14px;">Enter your Employee Number / Tag ID to vote</p>
+    
+    <input type="text" id="voter-tag" placeholder="e.g. ACT1505 or ADM 010">
+    <button class="btn" onclick="loginVoter()">Login to Vote</button>
+    <div id="error-msg" class="error"></div>
+</div>
 
-        <div id="error-msg"></div>
-        <div id="success-msg"></div>
-    </div>
+<script>
+    async function loginVoter() {
+        const tag = document.getElementById('voter-tag').value.trim();
+        const errorDiv = document.getElementById('error-msg');
+        errorDiv.textContent = '';
 
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const tag = document.getElementById('tag').value.trim();
-            const errorDiv = document.getElementById('error-msg');
-            const successDiv = document.getElementById('success-msg');
+        if (!tag) {
+            errorDiv.textContent = 'Please enter your employee number.';
+            return;
+        }
 
-            errorDiv.textContent = '';
-            successDiv.textContent = '';
+        try {
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tag })
+            });
 
-            try {
-                const response = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tag })
-                });
-
-                const data = await response.json();
-
-                if (response.ok && data.success) {
-                    successDiv.textContent = `Welcome, ${data.voter.name}! Redirecting...`;
-                    localStorage.setItem('voter', JSON.stringify(data.voter));
-                    setTimeout(() => {
-                        window.location.href = 'voting.html';
-                    }, 1200);
-                } else {
-                    errorDiv.textContent = data.message || 'Invalid Employee Number.';
-                }
-            } catch (err) {
-                errorDiv.textContent = 'Connection error. Please try again.';
+            const data = await res.json();
+            if (data.success) {
+                localStorage.setItem('voter', JSON.stringify(data.voter));
+                window.location.href = 'voting.html';
+            } else {
+                errorDiv.textContent = data.message || 'Invalid Employee Number.';
             }
-        });
-    </script>
+        } catch (err) {
+            errorDiv.textContent = 'Network error. Please try again.';
+        }
+    }
+</script>
 
 </body>
 </html>

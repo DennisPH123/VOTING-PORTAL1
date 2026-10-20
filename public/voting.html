@@ -5,13 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Swahili Beach - Official Ballot</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
-        .container { max-width: 700px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            min-height: 100vh;
+            background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('bg.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        .container { max-width: 700px; margin: 30px auto; background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 8px; box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
         .logo { max-width: 140px; display: block; margin: 0 auto 20px; }
         h1, h2 { color: #2c3e50; text-align: center; }
         .category-box { background: #fafbfc; border: 1px solid #e1e4e8; padding: 20px; border-radius: 6px; margin-bottom: 20px; }
         .nominees-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; margin-top: 15px; }
-        .nominee-card { border: 2px solid #ddd; border-radius: 6px; padding: 15px; text-align: center; cursor: pointer; transition: 0.2s; }
+        .nominee-card { border: 2px solid #ddd; border-radius: 6px; padding: 15px; text-align: center; cursor: pointer; transition: 0.2s; background: white; }
         .nominee-card:hover { border-color: #0056b3; background: #f0f8ff; }
         .nominee-card.selected { border-color: #28a745; background: #e8f5e9; }
         .nominee-img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; }

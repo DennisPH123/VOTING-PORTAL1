@@ -5,8 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Swahili Beach Voting</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
-        .container { max-width: 800px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            min-height: 100vh;
+            background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('bg.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        .container { max-width: 800px; margin: 20px auto; background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 8px; box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
         .logo-banner { max-width: 180px; display: block; margin: 0 auto 15px; }
         h1, h2 { color: #2c3e50; text-align: center; }
         .section { background: #fafbfc; border: 1px solid #e1e4e8; padding: 20px; border-radius: 6px; margin-bottom: 20px; }
@@ -23,7 +32,7 @@
 </head>
 <body>
 
-<div class="container" id="login-section">
+<div class="container" id="login-section" style="max-width: 400px; margin-top: 100px; text-align: center;">
     <img src="logo.png" alt="Swahili Beach Logo" class="logo-banner" onerror="this.style.display='none'">
     <h2>Admin Login</h2>
     <input type="password" id="admin-pass" placeholder="Enter Admin Password">
