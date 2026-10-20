@@ -19,19 +19,31 @@ app.use(session({
 // Serve static files from the 'public' folder
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Connect to SQLite Database
+// Connect to SQLite Database and Auto-Create Tables if missing
 const dbPath = path.join(__dirname, 'voting.db');
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error connecting to database:', err.message);
     } else {
         console.log('Connected to the SQLite database.');
+        
+        // Create tables automatically so queries never fail with "no such table"
+        db.run(`CREATE TABLE IF NOT EXISTS categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL
+        )`);
+
+        db.run(`CREATE TABLE IF NOT EXISTS nominees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category_id INTEGER,
+            name TEXT NOT NULL,
+            FOREIGN KEY(category_id) REFERENCES categories(id)
+        )`);
     }
 });
 
 // --- ADMIN API ROUTES ---
 
-// Get all categories and nominees
 app.get('/api/admin/data', (req, res) => {
     db.all("SELECT * FROM categories", [], (err, categories) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -43,7 +55,6 @@ app.get('/api/admin/data', (req, res) => {
     });
 });
 
-// Add a new category
 app.post('/api/admin/category', (req, res) => {
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: 'Category name is required' });
@@ -54,7 +65,6 @@ app.post('/api/admin/category', (req, res) => {
     });
 });
 
-// Add a new nominee
 app.post('/api/admin/nominee', (req, res) => {
     const { categoryId, name } = req.body;
     if (!categoryId || !name) return res.status(400).json({ error: 'Category and nominee name are required' });
@@ -65,7 +75,6 @@ app.post('/api/admin/nominee', (req, res) => {
     });
 });
 
-// Delete a category
 app.delete('/api/admin/category/:id', (req, res) => {
     const { id } = req.params;
     db.run("DELETE FROM categories WHERE id = ?", [id], (err) => {
@@ -74,7 +83,6 @@ app.delete('/api/admin/category/:id', (req, res) => {
     });
 });
 
-// Delete a nominee
 app.delete('/api/admin/nominee/:id', (req, res) => {
     const { id } = req.params;
     db.run("DELETE FROM nominees WHERE id = ?", [id], (err) => {
