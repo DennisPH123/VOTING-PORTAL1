@@ -17,7 +17,7 @@
         .nominee-row { display: flex; align-items: center; justify-content: space-between; background: white; padding: 10px; border: 1px solid #ddd; margin-top: 5px; border-radius: 4px; }
         .nominee-info { display: flex; align-items: center; gap: 10px; }
         .thumb { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .tally-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; }
     </style>
 </head>
 <body>
@@ -46,8 +46,8 @@
     </div>
 
     <div class="section">
-        <div class="header-row">
-            <h3>Manage Categories & Nominees (Live Tally)</h3>
+        <div class="tally-header">
+            <h3 style="margin: 0;">Live Vote Tally</h3>
             <button class="btn-info" onclick="loadDashboardData()">🔄 Refresh Tally</button>
         </div>
         <div id="admin-categories-list">Loading...</div>
@@ -83,17 +83,24 @@
             selectHtml += `<option value="${cat.id}">${cat.name}</option>`;
             
             listHtml += `
-                <div style="border-bottom: 2px solid #ccc; padding-bottom: 15px; margin-bottom: 15px;">
-                    <h4>${cat.name} <button class="btn-danger" onclick="deleteCategory('${cat.id}')">Delete Category</button></h4>
-                    <div style="margin-left: 20px;">
+                <div style="background: white; border: 1px solid #dcdcdc; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 style="margin: 0; color: #0056b3;">${cat.name}</h4>
+                        <button class="btn-danger" onclick="deleteCategory('${cat.id}')">Delete Category</button>
+                    </div>
+                    <div style="margin-left: 10px;">
             `;
+
+            if (cat.nominees.length === 0) {
+                listHtml += `<p style="color: #888; font-style: italic; margin: 5px 0;">No nominees added yet.</p>`;
+            }
 
             cat.nominees.forEach(n => {
                 listHtml += `
                     <div class="nominee-row">
                         <div class="nominee-info">
                             <img src="${n.photo}" class="thumb">
-                            <span><strong>${n.name || n.nomineeName || 'Unnamed'}</strong> - Votes: <strong style="color: #28a745; font-size: 17px;">${n.votes}</strong></span>
+                            <span><strong>${n.name || n.nomineeName || 'Unnamed'}</strong> - Votes: <strong style="color: #28a745; font-size: 18px;">${n.votes}</strong></span>
                         </div>
                         <button class="btn-danger" onclick="deleteNominee('${cat.id}', '${n.id}')">Remove</button>
                     </div>
