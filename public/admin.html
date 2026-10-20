@@ -12,10 +12,12 @@
         input, select, button { padding: 10px; margin: 5px 0; font-size: 15px; }
         input[type="text"], select { width: calc(100% - 22px); display: block; }
         .btn { background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-info { background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; padding: 8px 15px; font-weight: bold; }
         .btn-danger { background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; padding: 5px 10px; }
         .nominee-row { display: flex; align-items: center; justify-content: space-between; background: white; padding: 10px; border: 1px solid #ddd; margin-top: 5px; border-radius: 4px; }
         .nominee-info { display: flex; align-items: center; gap: 10px; }
         .thumb { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -44,7 +46,10 @@
     </div>
 
     <div class="section">
-        <h3>Manage Categories & Nominees (Live Tally)</h3>
+        <div class="header-row">
+            <h3>Manage Categories & Nominees (Live Tally)</h3>
+            <button class="btn-info" onclick="loadDashboardData()">🔄 Refresh Tally</button>
+        </div>
         <div id="admin-categories-list">Loading...</div>
     </div>
 </div>
@@ -88,7 +93,7 @@
                     <div class="nominee-row">
                         <div class="nominee-info">
                             <img src="${n.photo}" class="thumb">
-                            <span><strong>${n.name || n.nomineeName || 'Unnamed'}</strong> - Votes: <strong>${n.votes}</strong></span>
+                            <span><strong>${n.name || n.nomineeName || 'Unnamed'}</strong> - Votes: <strong style="color: #28a745; font-size: 17px;">${n.votes}</strong></span>
                         </div>
                         <button class="btn-danger" onclick="deleteNominee('${cat.id}', '${n.id}')">Remove</button>
                     </div>
@@ -130,7 +135,7 @@
 
         const formData = new FormData();
         formData.append('categoryId', categoryId);
-        formData.append('name', name); // Explicitly matches server requirement
+        formData.append('name', name);
         if (photoFile) formData.append('photo', photoFile);
 
         const res = await fetch('/api/admin/nominee', {
